@@ -39,6 +39,26 @@ pico1\build-arm\pico1_controller.uf2
 Hold BOOTSEL while connecting the Pico over USB, then copy the UF2 to the
 `RPI-RP2` drive.
 
+## Pico 1 pin connections
+
+The table reflects the current values in `pico1/include/pico_config.h`.
+These are prototype assignments only; verify them against the actual wiring
+before connecting the ESP32-S3 nodes.
+
+| Pico 1 GPIO | Signal | Connects to | Notes |
+| --- | --- | --- | --- |
+| GP0 | UART TX | ESP32-S3 nodes' UART RX inputs (shared broadcast line) | 115200 baud, TX only from Pico |
+| GP2 | SPI SCK | Node 1 SPI SCK | SPI master clock, 1 MHz |
+| GP3 | SPI MOSI | Node 1 SPI MOSI | Pico sends token packet |
+| GP5 | SPI CS | Node 1 SPI CS | Active low, controlled by Pico |
+| GP6 | READY input | Nodes' shared READY output | Current prototype treats READY as one shared signal |
+| GND | Ground | Common ground for Pico and all nodes | Required signal reference |
+| USB | USB CDC / power | Notebook | Current input is serial text, not a PIO USB keyboard |
+
+SPI MISO is not used by the current Pico token sender. The ESP32-S3 node pin
+numbers and the shared READY electrical arrangement are not finalized here;
+coordinate them with the circuit and node firmware before wiring.
+
 ## Current Pico prototype limitations
 
 - Notebook input currently uses USB CDC line input. PIO USB keyboard host
