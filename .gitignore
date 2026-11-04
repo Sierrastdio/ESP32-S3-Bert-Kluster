@@ -1,2 +1,26 @@
 local_ai/
 .vscode/
+
+# CMake / Ninja build trees
+build/
+build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+build.ninja
+.ninja_deps
+.ninja_log
+
+# Pico SDK build outputs
+*.elf
+#*.uf2
+*.bin
+*.hex
+*.map
+*.dis
+*.lst
+
+# Local editor and tool state
+.clangd/
+compile_commands.json
