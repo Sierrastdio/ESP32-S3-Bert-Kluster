@@ -7,7 +7,7 @@
 
 // Simple line-based vocabulary suitable for small prototype vocabularies.
 // Greedy WordPiece searches the loaded token list; vocab IDs are line numbers.
-typedef struct { char *text; uint16_t id; } vocab_entry_t;
+typedef struct { const char *text; uint16_t id; } vocab_entry_t;
 static vocab_entry_t vocab[4096];
 static size_t vocab_count;
 static uint16_t unk_id, cls_id, sep_id;
@@ -29,6 +29,19 @@ bool tokenizer_load_vocab(const char *path) {
     vocab_count++;
   }
   fclose(f);
+  return vocab_count && have_unk && have_cls && have_sep;
+}
+
+bool tokenizer_load_vocab_mem(const char *const *words, size_t n) {
+  vocab_count = 0; have_unk = have_cls = have_sep = false;
+  for (size_t i = 0; i < n && i < 4096; i++) {
+    vocab[i].text = words[i];
+    vocab[i].id = (uint16_t)i;
+    if (!strcmp(words[i], "[UNK]")) { unk_id = (uint16_t)i; have_unk = true; }
+    if (!strcmp(words[i], "[CLS]")) { cls_id = (uint16_t)i; have_cls = true; }
+    if (!strcmp(words[i], "[SEP]")) { sep_id = (uint16_t)i; have_sep = true; }
+    vocab_count++;
+  }
   return vocab_count && have_unk && have_cls && have_sep;
 }
 

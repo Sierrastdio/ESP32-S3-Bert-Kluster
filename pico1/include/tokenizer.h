@@ -6,3 +6,4 @@
 bool tokenizer_load_vocab(const char *path);
 bool tokenizer_encode(const char *text, uint16_t *ids, size_t capacity,
                       size_t *count);
+bool tokenizer_load_vocab_mem(const char *const *words, size_t n);

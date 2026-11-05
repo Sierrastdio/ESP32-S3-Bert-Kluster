@@ -20,7 +20,9 @@ token IDs to node 1 over SPI master.
   `protocol.h` fields before this Pico sender interoperates with it.
 - Result reception and retry/error recovery are not implemented yet.
 
-Build with Pico SDK: configure this directory with CMake and build target
-`pico1_controller`. Copy the vocabulary file to the configured path in a way
-supported by the selected Pico filesystem/embedding workflow; plain host file
-paths do not exist on the Pico at runtime.
+Build with Pico SDK 2.3.1 and its TinyUSB submodule initialized.
+Pico-PIO-USB is a separate dependency; set `PICO_PIO_USB_PATH` to its source
+directory when configuring CMake if it is not already under TinyUSB. Then build
+target `pico1_controller`. Copy the vocabulary file to the configured path in a
+way supported by the selected Pico filesystem/embedding workflow; plain host
+file paths do not exist on the Pico at runtime.

@@ -6,7 +6,18 @@
 #include "tusb.h"
 #include <string.h>
 
-static queue_t kbd_q;                 // core1 -> core0 (코어 간 안전)
+// 1: 진단용 LED 사용 (연결되면 켜짐, 키보드 HID 인식 시 한 번 깜빡임), 0: 끔
+#define USB_KBD_DEBUG_LED 1
+
+#if USB_KBD_DEBUG_LED
+  #include "hardware/gpio.h"
+  #define DBG_LED PICO_DEFAULT_LED_PIN
+  #define DBG(v) gpio_put(DBG_LED, (v))
+#else
+  #define DBG(v) ((void)0)
+#endif
+
+static queue_t kbd_q;                 // core1 -> core0
 static uint8_t prev_keys[6];
 
 static char hid_to_ascii(uint8_t k, bool shift) {
@@ -16,8 +27,8 @@ static char hid_to_ascii(uint8_t k, bool shift) {
     return shift ? s[k - 0x1e] : n[k - 0x1e];
   }
   switch (k) {
-    case 0x28: case 0x58: return '\n';        // Enter / 키패드 Enter
-    case 0x2a: return 8;                      // Backspace
+    case 0x28: case 0x58: return '\n';
+    case 0x2a: return 8;
     case 0x2c: return ' ';
     case 0x2d: return shift ? '_' : '-';
     case 0x2e: return shift ? '+' : '=';
@@ -34,12 +45,17 @@ static char hid_to_ascii(uint8_t k, bool shift) {
   return 0;
 }
 
+// 기기가 연결되어 열거가 끝나면 호출됨 (HID 여부와 무관)
+void tuh_mount_cb(uint8_t dev_addr)  { (void)dev_addr; DBG(1); }
+void tuh_umount_cb(uint8_t dev_addr) { (void)dev_addr; DBG(0); memset(prev_keys, 0, sizeof(prev_keys)); }
+
 void tuh_hid_mount_cb(uint8_t dev, uint8_t inst, const uint8_t *desc, uint16_t len) {
   (void)desc; (void)len;
   if (tuh_hid_interface_protocol(dev, inst) == HID_ITF_PROTOCOL_KEYBOARD) {
-    tuh_hid_set_protocol(dev, inst, HID_PROTOCOL_BOOT);  // 8바이트 고정 리포트
+    tuh_hid_set_protocol(dev, inst, HID_PROTOCOL_BOOT);   // 8바이트 고정 리포트
     memset(prev_keys, 0, sizeof(prev_keys));
     tuh_hid_receive_report(dev, inst);
+    DBG(0); sleep_ms(150); DBG(1);                        // 키보드 HID 인식 표시
   }
 }
 
@@ -49,10 +65,10 @@ void tuh_hid_report_received_cb(uint8_t dev, uint8_t inst, const uint8_t *report
     bool shift = r->modifier & (KEYBOARD_MODIFIER_LEFTSHIFT | KEYBOARD_MODIFIER_RIGHTSHIFT);
     for (int i = 0; i < 6; i++) {
       uint8_t k = r->keycode[i];
-      if (k < 4) continue;                       // 0=없음, 1=rollover 오류
+      if (k < 4) continue;                                // 0=없음, 1=rollover 오류
       bool was = false;
       for (int j = 0; j < 6; j++) if (prev_keys[j] == k) { was = true; break; }
-      if (was) continue;                         // 눌린 채 유지 중인 키는 무시
+      if (was) continue;                                  // 눌린 채 유지 중인 키는 무시
       char c = hid_to_ascii(k, shift);
       if (c) queue_try_add(&kbd_q, &c);
     }
@@ -63,9 +79,9 @@ void tuh_hid_report_received_cb(uint8_t dev, uint8_t inst, const uint8_t *report
 
 static void core1_main(void) {
   pio_usb_configuration_t cfg = PIO_USB_DEFAULT_CONFIG;
-  cfg.pin_dp = CONFIG_PIO_USB_DP_PIN;
+  cfg.pin_dp = CONFIG_PIO_USB_DP_PIN;                     // D-는 자동으로 GP9
   tuh_configure(1, TUH_CFGID_RPI_PIO_USB_CONFIGURATION, &cfg);
-  tuh_init(1);                                   // rhport 1 = PIO USB
+  tuh_init(1);                                            // rhport 1 = PIO USB
   while (true) tuh_task();
 }
 

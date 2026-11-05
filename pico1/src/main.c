@@ -7,6 +7,7 @@
 #include "tokenizer.h"
 #include "usb_kbd.h"
 #include "hardware/clocks.h"
+#include "vocab_data.h"
 #include <stddef.h>      // offsetof 용 (원래 빠져 있었음)
 #include <stdio.h>
 #include <string.h>
@@ -16,6 +17,7 @@
 
 
 #define LED_PIN PICO_DEFAULT_LED_PIN
+
 
 static void led_blink(int times, int on_ms, int off_ms) {
   for (int i = 0; i < times; i++) {
@@ -45,6 +47,10 @@ static bool read_line(char *buf, size_t cap) {
   while (true) {
     int c = usb_kbd_getchar();
     if (c == PICO_ERROR_TIMEOUT) { tight_loop_contents(); continue; }
+    // Debug: blink once for every character event delivered by the USB keyboard.
+    gpio_put(LED_PIN, 1);
+    sleep_ms(25);
+    gpio_put(LED_PIN, 0);
     if (c == '\n') { if (!n) continue; buf[n] = 0; return true; }
     if (c == 8)    { if (n) n--; continue; }
     if (c < 32 || c > 126) continue;       // 무시
@@ -87,7 +93,7 @@ int main(void) {
   gpio_init(CONFIG_SPI_TX_CS_PIN); gpio_set_dir(CONFIG_SPI_TX_CS_PIN, GPIO_OUT); gpio_put(CONFIG_SPI_TX_CS_PIN, 1);
   gpio_init(CONFIG_SPI_READY_PIN); gpio_set_dir(CONFIG_SPI_READY_PIN, GPIO_IN); gpio_pull_down(CONFIG_SPI_READY_PIN);
 
-  if (!tokenizer_load_vocab(CONFIG_VOCAB_PATH)) LED_FATAL();
+  if (!tokenizer_load_vocab_mem(vocab_words, vocab_word_count)) LED_FATAL();
   char line[256]; uint16_t ids[CONFIG_MAX_TOKENS];
   LED_READY();
 
@@ -96,6 +102,20 @@ int main(void) {
     size_t count = 0;
     if (!tokenizer_encode(line, ids, CONFIG_MAX_TOKENS, &count)) { LED_INPUT_ERR(); continue; }
 
+    // Keyboard/tokenizer bring-up mode: show the result before involving nodes.
+    printf("tokens=%u :", (unsigned)count);
+    for (size_t i = 0; i < count; i++) {
+      printf(" %u=\"%s\"", ids[i], vocab_words[ids[i]]);
+    }
+    printf("\n");
+    LED_OK();
+    sentence_id++;
+
+    // Node communication is deliberately paused while validating keyboard input
+    // and tokenization. Re-enable config broadcast, READY wait, and SPI send later.
+    continue;
+
+    /*
     uint32_t payload = (uint32_t)count * CONFIG_HIDDEN_SIZE * CONFIG_BYTES_PER_VALUE;
     config_message_t cfg = {PROTO_MAGIC, PROTO_VERSION, MSG_CONFIG, sentence_id, (uint16_t)count, payload, DTYPE_FP16, 0, 0};
     cfg.crc32 = protocol_crc32(&cfg, offsetof(config_message_t, crc32));
@@ -108,6 +128,7 @@ int main(void) {
     spi_send_tokens(ids, (uint16_t)count);
     sentence_id++;
     LED_OK();
+    */
   }
 }
 
