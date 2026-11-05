@@ -13,6 +13,25 @@
 
 #define UART_ID uart0
 #define SPI_ID spi0
+
+
+#define LED_PIN PICO_DEFAULT_LED_PIN
+
+static void led_blink(int times, int on_ms, int off_ms) {
+  for (int i = 0; i < times; i++) {
+    gpio_put(LED_PIN, 1); sleep_ms(on_ms);
+    gpio_put(LED_PIN, 0); sleep_ms(off_ms);
+  }
+}
+#define LED_READY()      led_blink(1, 80, 0)
+#define LED_OK()         led_blink(2, 80, 120)
+#define LED_INPUT_ERR()  led_blink(5, 50, 50)
+#define LED_TIMEOUT()    led_blink(3, 400, 200)
+#define LED_FATAL()      while (1) led_blink(1, 50, 50)
+
+
+
+
 static uint16_t sentence_id;
 
 uint32_t protocol_crc32(const void *data, uint32_t length) {
@@ -21,29 +40,19 @@ uint32_t protocol_crc32(const void *data, uint32_t length) {
   return ~crc;
 }
 
-
-static int get_char(void) {
-  int c = usb_kbd_getchar();
-  return (c != PICO_ERROR_TIMEOUT) ? c : getchar_timeout_us(0);
-}
-
-static void discard_line(void) {
-  int c;
-  do { c = get_char(); } while (c != '\n' && c != '\r');
-}
-
 static bool read_line(char *buf, size_t cap) {
-  printf("\n문장 입력> "); fflush(stdout); size_t n = 0;
+  size_t n = 0;
   while (true) {
-    int c = get_char();
+    int c = usb_kbd_getchar();
     if (c == PICO_ERROR_TIMEOUT) { tight_loop_contents(); continue; }
-    if (c == '\r' || c == '\n') { if (!n) continue; buf[n] = 0; puts(""); return true; }
-    if (c == 8 || c == 127) { if (n) { n--; printf("\b \b"); fflush(stdout); } continue; }
-    if (c < 32 || c > 126) { puts("ASCII 영어 입력만 지원합니다."); discard_line(); return false; }
-    if (n + 1 >= cap) { puts("입력이 너무 깁니다."); discard_line(); return false; }
-    buf[n++] = (char)c; putchar(c); fflush(stdout);
+    if (c == '\n') { if (!n) continue; buf[n] = 0; return true; }
+    if (c == 8)    { if (n) n--; continue; }
+    if (c < 32 || c > 126) continue;       // 무시
+    if (n + 1 >= cap) { while (usb_kbd_getchar() != '\n') tight_loop_contents(); return false; }
+    buf[n++] = (char)c;
   }
 }
+
 
 
 static bool uart_broadcast(const void *data, size_t len) {
@@ -64,34 +73,41 @@ static bool spi_send_tokens(const uint16_t *ids, uint16_t count) {
   return true;
 }
 
+
 int main(void) {
-  set_sys_clock_khz(120000, true);   // 반드시 stdio_init_all 이전
-  stdio_init_all(); sleep_ms(1500);
-  uart_init(UART_ID,CONFIG_UART_BAUD);
-  gpio_set_function(CONFIG_UART_TX_PIN,GPIO_FUNC_UART);
-  spi_init(SPI_ID,CONFIG_SPI_BAUD);
-  gpio_set_function(CONFIG_SPI_TX_SCK_PIN,GPIO_FUNC_SPI);
-  gpio_set_function(CONFIG_SPI_TX_MOSI_PIN,GPIO_FUNC_SPI);
-  gpio_init(CONFIG_SPI_TX_CS_PIN); gpio_set_dir(CONFIG_SPI_TX_CS_PIN,GPIO_OUT); gpio_put(CONFIG_SPI_TX_CS_PIN,1);
-  gpio_init(CONFIG_SPI_READY_PIN); gpio_set_dir(CONFIG_SPI_READY_PIN,GPIO_IN); gpio_pull_down(CONFIG_SPI_READY_PIN);
-  bi_decl(bi_1pin_with_name(CONFIG_UART_TX_PIN,"Node config UART TX"));
-  puts("Pico 1 controller starting");
-  if (!tokenizer_load_vocab(CONFIG_VOCAB_PATH)) { puts("vocab.txt missing or lacks [UNK]/[CLS]/[SEP]"); while(1) sleep_ms(1000); }
+  set_sys_clock_khz(120000, true);
+  gpio_init(LED_PIN); gpio_set_dir(LED_PIN, GPIO_OUT);
+  usb_kbd_start();
+
+  uart_init(UART_ID, CONFIG_UART_BAUD);
+  gpio_set_function(CONFIG_UART_TX_PIN, GPIO_FUNC_UART);
+  spi_init(SPI_ID, CONFIG_SPI_BAUD);
+  gpio_set_function(CONFIG_SPI_TX_SCK_PIN, GPIO_FUNC_SPI);
+  gpio_set_function(CONFIG_SPI_TX_MOSI_PIN, GPIO_FUNC_SPI);
+  gpio_init(CONFIG_SPI_TX_CS_PIN); gpio_set_dir(CONFIG_SPI_TX_CS_PIN, GPIO_OUT); gpio_put(CONFIG_SPI_TX_CS_PIN, 1);
+  gpio_init(CONFIG_SPI_READY_PIN); gpio_set_dir(CONFIG_SPI_READY_PIN, GPIO_IN); gpio_pull_down(CONFIG_SPI_READY_PIN);
+
+  if (!tokenizer_load_vocab(CONFIG_VOCAB_PATH)) LED_FATAL();
   char line[256]; uint16_t ids[CONFIG_MAX_TOKENS];
+  LED_READY();
+
   while (true) {
-    if (!read_line(line,sizeof(line))) continue;
-    size_t count=0;
-    if (!tokenizer_encode(line,ids,CONFIG_MAX_TOKENS,&count)) { puts("토큰화 실패: 비ASCII, 토큰 초과 또는 어휘 문제"); continue; }
-    uint32_t payload=(uint32_t)count*CONFIG_HIDDEN_SIZE*CONFIG_BYTES_PER_VALUE;
-    config_message_t cfg={PROTO_MAGIC,PROTO_VERSION,MSG_CONFIG,sentence_id,(uint16_t)count,payload,DTYPE_FP16,0,0};
-    cfg.crc32=protocol_crc32(&cfg,offsetof(config_message_t,crc32));
-    uart_broadcast(&cfg,sizeof(cfg));
-    printf("sentence=%u tokens=%u data-packet=%lu bytes\n",sentence_id,count,(unsigned long)payload);
-    // READY is expected high only after all four nodes accept this sentence's config.
-    absolute_time_t deadline=make_timeout_time_ms(5000);
+    if (!read_line(line, sizeof(line))) { LED_INPUT_ERR(); continue; }
+    size_t count = 0;
+    if (!tokenizer_encode(line, ids, CONFIG_MAX_TOKENS, &count)) { LED_INPUT_ERR(); continue; }
+
+    uint32_t payload = (uint32_t)count * CONFIG_HIDDEN_SIZE * CONFIG_BYTES_PER_VALUE;
+    config_message_t cfg = {PROTO_MAGIC, PROTO_VERSION, MSG_CONFIG, sentence_id, (uint16_t)count, payload, DTYPE_FP16, 0, 0};
+    cfg.crc32 = protocol_crc32(&cfg, offsetof(config_message_t, crc32));
+    uart_broadcast(&cfg, sizeof(cfg));
+
+    absolute_time_t deadline = make_timeout_time_ms(5000);
     while (!gpio_get(CONFIG_SPI_READY_PIN) && !time_reached(deadline)) tight_loop_contents();
-    if (!gpio_get(CONFIG_SPI_READY_PIN)) { puts("노드 READY timeout"); continue; }
-    spi_send_tokens(ids,(uint16_t)count);
+    if (!gpio_get(CONFIG_SPI_READY_PIN)) { LED_TIMEOUT(); continue; }
+
+    spi_send_tokens(ids, (uint16_t)count);
     sentence_id++;
+    LED_OK();
   }
 }
+
