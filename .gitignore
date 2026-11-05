@@ -24,3 +24,5 @@ build.ninja
 # Local editor and tool state
 .clangd/
 compile_commands.json
+
+.clang-format
