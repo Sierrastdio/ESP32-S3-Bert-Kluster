@@ -5,6 +5,9 @@
 #include "pico_config.h"
 #include "protocol.h"
 #include "tokenizer.h"
+#include "usb_kbd.h"
+#include "hardware/clocks.h"
+#include <stddef.h>      // offsetof 용 (원래 빠져 있었음)
 #include <stdio.h>
 #include <string.h>
 
@@ -18,18 +21,30 @@ uint32_t protocol_crc32(const void *data, uint32_t length) {
   return ~crc;
 }
 
+
+static int get_char(void) {
+  int c = usb_kbd_getchar();
+  return (c != PICO_ERROR_TIMEOUT) ? c : getchar_timeout_us(0);
+}
+
+static void discard_line(void) {
+  int c;
+  do { c = get_char(); } while (c != '\n' && c != '\r');
+}
+
 static bool read_line(char *buf, size_t cap) {
-  printf("\n문장 입력> "); fflush(stdout); size_t n=0;
+  printf("\n문장 입력> "); fflush(stdout); size_t n = 0;
   while (true) {
-    int c=getchar_timeout_us(0);
-    if (c==PICO_ERROR_TIMEOUT) { tight_loop_contents(); continue; }
-    if (c=='\r' || c=='\n') { if (!n) continue; buf[n]=0; puts(""); return true; }
-    if (c==8 || c==127) { if (n) n--; continue; }
-    if (c<32 || c>126) { puts("ASCII 영어 입력만 지원합니다."); while (getchar_timeout_us(0)!='\n') tight_loop_contents(); return false; }
-    if (n+1>=cap) { puts("입력이 너무 깁니다."); while (getchar_timeout_us(0)!='\n') tight_loop_contents(); return false; }
-    buf[n++]=(char)c; putchar(c); fflush(stdout);
+    int c = get_char();
+    if (c == PICO_ERROR_TIMEOUT) { tight_loop_contents(); continue; }
+    if (c == '\r' || c == '\n') { if (!n) continue; buf[n] = 0; puts(""); return true; }
+    if (c == 8 || c == 127) { if (n) { n--; printf("\b \b"); fflush(stdout); } continue; }
+    if (c < 32 || c > 126) { puts("ASCII 영어 입력만 지원합니다."); discard_line(); return false; }
+    if (n + 1 >= cap) { puts("입력이 너무 깁니다."); discard_line(); return false; }
+    buf[n++] = (char)c; putchar(c); fflush(stdout);
   }
 }
+
 
 static bool uart_broadcast(const void *data, size_t len) {
   uart_write_blocking(UART_ID, (const uint8_t *)data, len);
@@ -50,6 +65,7 @@ static bool spi_send_tokens(const uint16_t *ids, uint16_t count) {
 }
 
 int main(void) {
+  set_sys_clock_khz(120000, true);   // 반드시 stdio_init_all 이전
   stdio_init_all(); sleep_ms(1500);
   uart_init(UART_ID,CONFIG_UART_BAUD);
   gpio_set_function(CONFIG_UART_TX_PIN,GPIO_FUNC_UART);
