@@ -69,3 +69,13 @@ Hold BOOTSEL while connecting the Pico over USB, then copy the UF2 to the
 The current firmware blinks the onboard LED for 25 ms on every keyboard
 character event as an input diagnostic.
 
+------------------------------------
+training guide
+
+sudo apt update && sudo apt install -y python3-venv python3-pip
+python3 -m venv ~/ai
+source ~/ai/bin/activate
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+pip install transformers
+
+python medium_train.py
