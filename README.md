@@ -81,22 +81,27 @@ The active trainer is `Bert/medium_train_v2.py`.
 
 ## sierrastdio Windows Arch WSL training env
 
-Windows 본 프로젝트를 Arch WSL의 사용자 소유 Linux 경로로 복사해 학습합니다. **Arch WSL을 연 뒤** 아래 순서로 최초 준비합니다.
+Claude/Codex와 Git은 Windows 본 프로젝트에서 사용하고, 학습은 Arch WSL의 Linux 복사본에서 합니다. **Arch WSL을 연 뒤** 최초 설정은 다음 순서입니다.
 
 ```bash
 WIN_PROJECT=/mnt/c/Users/sierra/Documents/ESP32-S3-Bert-Kluster
 WSL_PROJECT="$HOME/projects/ESP32-S3-Bert-Kluster"
-mkdir -p "$WSL_PROJECT"
-cp -r "$WIN_PROJECT/." "$WSL_PROJECT/"
-chmod -R u+rwX "$WSL_PROJECT"
+bash "$WIN_PROJECT/Bert/sync_to_wsl.sh"
 cd "$WSL_PROJECT/Bert"
 if [ ! -f pytorch_model.bin ]; then cp ~/clone/ESP32-S3-Bert-Kluster/Bert/pytorch_model.bin .; fi
 bash setup_arch.sh cu132 # 최초 한 번: RTX 3060용 CUDA PyTorch와 패키지 설치
 source .venv/bin/activate
 python -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else '')"
-bash run_train.sh        # 최초 학습만; 저장 체크포인트가 있으면 평가만 함
+bash run_train.sh
+bash "$WIN_PROJECT/Bert/sync_from_wsl.sh" # pruned 결과를 Windows로 가져오기
 ```
 
-NVIDIA GPU를 쓰려면 WSL에서 `nvidia-smi`를 확인하고, [PyTorch 공식 설치 안내](https://pytorch.org/get-started/locally/)에서 확인한 CUDA wheel 태그로 `bash setup_arch.sh cuXXX`를 실행합니다. 스크립트는 CUDA 사용 가능 여부에 따라 GPU 또는 CPU를 자동 선택합니다. 상세 안내는 [`Bert/README.md`](Bert/README.md)를 참고하세요.
+최초 설정 후에는 Windows에서 코드와 `Bert/hard_examples.tsv`를 수정·저장하고, WSL에서 아래를 실행해 한 학습 회차를 돌립니다.
 
-`~/clone`은 읽기 전용일 수 있으므로 학습은 `~/projects/ESP32-S3-Bert-Kluster` 복사본에서 진행합니다. 이후 새 WSL 터미널에서는 먼저 `cd "$HOME/projects/ESP32-S3-Bert-Kluster/Bert"`와 `source .venv/bin/activate`를 실행합니다. Windows 본 프로젝트의 `Bert/hard_examples.tsv`에 새 라벨 예시를 추가한 뒤 `bash train_cycle.sh`로 동기화·GPU 확인·보강 학습·검증·자동 채택/보류를 진행합니다. 데이터가 바뀌지 않으면 중복 학습은 건너뜁니다. 산출물은 WSL 복사본의 `Bert/pruned/`에 생깁니다. 상세 시간순 절차와 라벨 형식은 [`Bert/README.md`](Bert/README.md)를 참고하세요.
+```bash
+cd "$HOME/projects/ESP32-S3-Bert-Kluster/Bert"
+source .venv/bin/activate
+bash /mnt/c/Users/sierra/Documents/ESP32-S3-Bert-Kluster/Bert/train_cycle.sh
+```
+
+`sync_to_wsl.sh`는 `.git`, `.venv`, WSL `Bert/pruned/`를 덮어쓰지 않습니다. `sync_from_wsl.sh`는 학습 산출물만 Windows로 가져옵니다. GitHub push는 Windows 저장소에서만 합니다. 상세 시간순 절차와 라벨 형식은 [`Bert/README.md`](Bert/README.md)를 참고하세요.

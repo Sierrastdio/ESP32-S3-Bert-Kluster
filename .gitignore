@@ -1,6 +1,10 @@
 local_ai/
 .vscode/
 
+# WSL training reports copied back for review
+Bert/latest_unseen_errors.tsv
+Bert/latest_train_cycle.log
+
 # CMake / Ninja build trees
 build/
 build-*/
@@ -20,6 +24,8 @@ build.ninja
 *.map
 *.dis
 *.lst
+
+*.pt
 
 # Local editor and tool state
 .clangd/
