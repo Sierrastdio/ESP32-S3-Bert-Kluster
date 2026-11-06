@@ -7,13 +7,16 @@ BERT-Medium: 어휘 줄이기 -> 줄인 어휘로 학습 -> 저장  (브리프�
          평가            : 학습 템플릿과 겹치지 않는 처음 보는 문장(UNSEEN)으로 따로 평가
 
 이 파일을 모델 파일(config.json, pytorch_model.bin, vocab.txt)과 같은 폴더에 두고 실행:
-    python .\\medium_train.py
+    python medium_train_v2.py
 결과는 같은 폴더의 pruned\\ 에 저장 (원본 파일은 건드리지 않음)
 다시 학습하려면 pruned\\model_finetuned.pt 를 지우고 실행
 """
+import argparse
 import os
 import random
+import shutil
 import string
+from datetime import datetime
 
 import torch
 import torch.nn as nn
@@ -26,7 +29,9 @@ SAVE = os.path.join(OUT, "model_finetuned.pt")
 VOCAB_BUDGET = 1300          # 보드1 플래시 예산으로 정한 최대 단어 수 (추정값, 바뀌면 여기만 수정)
 MAX_LEN = 64                 # 최대 토큰 수 ([CLS], [SEP] 포함)
 EPOCHS, BATCH, LR = 4, 32, 5e-5
+FINETUNE_EPOCHS, FINETUNE_LR, HARD_REPEAT = 2, 5e-6, 5
 CONF_THRESHOLD = 0.6         # 이보다 확신이 낮으면 HOLD
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 DEVICES = ["led", "motor", "fan"]
 ACTIONS = ["on", "off", "change", "none"]           # none = 명령이 아닌 문장 (비트 11)
@@ -176,7 +181,6 @@ UNSEEN_GROUPS = {
 }
 UNSEEN = [x for items in UNSEEN_GROUPS.values() for x in items]
 
-
 def contractions(s):
     """it is -> it's / its, i am -> i'm / im, can not -> can't / cant 변형을 함께 만든다"""
     out = {s}
@@ -224,6 +228,52 @@ def build_dataset():
         print(f"  ※ 평가 문장이 학습 데이터에 섞였습니다: {sorted(leaked)}")
     random.shuffle(data)
     return data
+
+
+def build_finetune_dataset():
+    data = build_dataset()
+    hard_examples = load_hard_examples()
+    hard_texts = {s for s, *_ in hard_examples}
+    leaked = hard_texts & {s for s, *_ in UNSEEN}
+    if leaked:
+        raise RuntimeError(f"보강 학습 문장이 고정 평가셋과 겹칩니다: {sorted(leaked)}")
+    data.extend(hard_examples * HARD_REPEAT)
+    random.shuffle(data)
+    print(f"[보강] {BASE}/hard_examples.tsv에서 어려운 예시 {len(hard_examples)}개를 "
+          f"{HARD_REPEAT}회 반복 추가")
+    return data
+
+
+def load_hard_examples():
+    path = os.path.join(BASE, "hard_examples.tsv")
+    examples = []
+    with open(path, encoding="utf-8") as f:
+        for line_no, raw in enumerate(f, 1):
+            line = raw.rstrip("\r\n")
+            if not line or line.lstrip().startswith("#"):
+                continue
+            fields = line.split("\t")
+            if len(fields) != 4:
+                raise ValueError(f"{path}:{line_no}: text, device, action, amount 4개 열이 필요합니다")
+            text, device, action, amount = (field.strip() for field in fields)
+            if not text or action not in ACTIONS:
+                raise ValueError(f"{path}:{line_no}: 문장 또는 action 라벨이 올바르지 않습니다")
+            if device == "-":
+                dev_id = IGNORE
+                if action != "none" or amount != "-":
+                    raise ValueError(f"{path}:{line_no}: none 예시는 device와 amount를 모두 '-'로 써야 합니다")
+                amount_id = IGNORE
+            else:
+                if device not in DEVICES or amount not in {str(i) for i in range(8)}:
+                    raise ValueError(f"{path}:{line_no}: device 또는 amount 라벨이 올바르지 않습니다")
+                dev_id = DEVICES.index(device)
+                amount_id = int(amount)
+                if action == "none":
+                    raise ValueError(f"{path}:{line_no}: none 예시의 device는 '-'여야 합니다")
+            examples.append((text, dev_id, ACTIONS.index(action), amount_id))
+    if not examples:
+        raise ValueError(f"보강 예시가 없습니다: {path}")
+    return examples
 
 
 # ---------------------------------------------------------------- 2단계: 단어 목록 만들기
@@ -292,8 +342,9 @@ class Controller(nn.Module):
 
 
 def encode(tok, sentences):
-    return tok([s.lower() for s in sentences], padding=True, truncation=True,
-               max_length=MAX_LEN, return_tensors="pt")
+    batch = tok([s.lower() for s in sentences], padding=True, truncation=True,
+                max_length=MAX_LEN, return_tensors="pt")
+    return {name: value.to(DEVICE) for name, value in batch.items()}
 
 
 def predict_batch(model, tok, sentences):
@@ -315,25 +366,25 @@ def accuracy(model, tok, data):
 
 
 # ---------------------------------------------------------------- 4단계: 학습
-def train(model, tok, data):
+def train(model, tok, data, epochs=EPOCHS, lr=LR):
     split = int(len(data) * 0.85)
     train_set, test_set = data[:split], data[split:]
-    opt = torch.optim.AdamW(model.parameters(), lr=LR)
+    opt = torch.optim.AdamW(model.parameters(), lr=lr)
     ce = nn.CrossEntropyLoss(ignore_index=IGNORE)
     steps = (len(train_set) + BATCH - 1) // BATCH
-    for ep in range(EPOCHS):
+    for ep in range(epochs):
         model.train()
         random.shuffle(train_set)
         total = 0.0
         for i in range(0, len(train_set), BATCH):
             b = train_set[i:i + BATCH]
-            y = [torch.tensor(col) for col in zip(*[(d, a, m) for _, d, a, m in b])]
+            y = [torch.tensor(col, device=DEVICE) for col in zip(*[(d, a, m) for _, d, a, m in b])]
             loss = sum(ce(o, t) for o, t in zip(model(**encode(tok, [s for s, *_ in b])), y))
             opt.zero_grad()
             loss.backward()
             opt.step()
             total += loss.item()
-        print(f"  epoch {ep + 1}/{EPOCHS}  loss {total / steps:.3f}  "
+        print(f"  epoch {ep + 1}/{epochs}  loss {total / steps:.3f}  "
               f"test acc {accuracy(model, tok, test_set):.1%}  "
               f"처음 보는 문장 acc {accuracy(model, tok, UNSEEN):.1%} (양까지 정확히 일치 기준)")
 
@@ -357,10 +408,10 @@ def predict(model, tok, text):
             f"amount={m}/7  |  confidence {conf:.0%}")
 
 
-def report_unseen(model, tok):
+def evaluate_unseen(model, tok):
     pred = predict_batch(model, tok, [s for s, *_ in UNSEEN]).tolist()
-    print("\n--- 처음 보는 문장 중 틀린 것 (양은 ±1까지 정답으로 봄) ---")
-    i, total, summary = 0, 0, []
+    scores, errors = {}, []
+    i = 0
     for group, items in UNSEEN_GROUPS.items():
         hit = 0
         for s, d, a, m in items:
@@ -368,23 +419,112 @@ def report_unseen(model, tok):
             i += 1
             if a == 3:
                 ok = pa == 3
-                want = "none"
+                expected = "none"
             else:
                 ok = pd == d and pa == a and (a == 1 or abs(pm - m) <= 1)
-                want = f"{DEVICES[d]}/{ACTIONS[a]}/{m}"
-            hit += ok
+                expected = f"{DEVICES[d]}/{ACTIONS[a]}/{m}"
             if not ok:
-                print(f"X [{group}] {s:<38} 정답 {want:<16} -> {predict(model, tok, s)}")
-        summary.append(f"{group} {hit}/{len(items)}")
-        total += hit
-    print(f"\n처음 보는 문장 정답률: {', '.join(summary)}  |  전체 {total}/{len(UNSEEN)}")
+                predicted = "none" if pa == 3 else f"{DEVICES[pd]}/{ACTIONS[pa]}/{pm}"
+                errors.append((group, s, expected, predicted))
+            hit += ok
+        scores[group] = (hit, len(items))
+    return scores, errors
+
+
+def weighted_unseen_score(scores):
+    # 명령 아닌 문장을 잘못 실행하는 오류를 더 무겁게 취급한다.
+    direct = scores["직접 명령"][0]
+    vague = scores["애매한 표현"][0]
+    none = scores["명령 아님"][0]
+    return direct + vague + 2 * none
+
+
+def save_unseen_errors(errors):
+    os.makedirs(OUT, exist_ok=True)
+    path = os.path.join(OUT, "last_unseen_errors.tsv")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("group\tsentence\texpected\tpredicted\n")
+        for row in errors:
+            f.write("\t".join(value.replace("\t", " ") for value in row) + "\n")
+    return path
+
+
+def report_unseen(model, tok):
+    scores, errors = evaluate_unseen(model, tok)
+    print("\n--- 처음 보는 문장 중 틀린 것 (양은 ±1까지 정답으로 봄) ---")
+    for group, sentence, expected, _ in errors:
+        print(f"X [{group}] {sentence:<38} 정답 {expected:<16} -> {predict(model, tok, sentence)}")
+    summary = [f"{group} {hit}/{total}" for group, (hit, total) in scores.items()]
+    total_hit = sum(hit for hit, _ in scores.values())
+    print(f"\n처음 보는 문장 정답률: {', '.join(summary)}  |  전체 {total_hit}/{len(UNSEEN)}")
+    print(f"오답 목록: {save_unseen_errors(errors)}")
+    return scores
+
+
+def load_pruned_model():
+    tok = BertTokenizer.from_pretrained(OUT, do_lower_case=True)
+    model = Controller(BertModel(BertConfig.from_pretrained(OUT)))
+    model.load_state_dict(torch.load(SAVE, map_location="cpu")["state_dict"])
+    return tok, model.to(DEVICE)
+
+
+def save_model(model, keep_backup=False):
+    if keep_backup and os.path.exists(SAVE):
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        backup = os.path.join(OUT, f"model_finetuned_before_{stamp}.pt")
+        shutil.copy2(SAVE, backup)
+        print(f"기존 모델 백업: {backup}")
+    cpu_state = {name: value.detach().cpu() for name, value in model.state_dict().items()}
+    temp_save = SAVE + ".tmp"
+    torch.save({"state_dict": cpu_state, "devices": DEVICES, "actions": ACTIONS,
+                "max_len": MAX_LEN}, temp_save)
+    os.replace(temp_save, SAVE)
+    print(f"저장: {SAVE}")
+
+
+def finetune_with_gate(tok, model):
+    before_state = {name: value.detach().cpu().clone()
+                    for name, value in model.state_dict().items()}
+    before = evaluate_unseen(model, tok)[0]
+    before_score = weighted_unseen_score(before)
+    print(f"보강 전 점수: {before}, 안전 가중 점수={before_score}")
+
+    data = build_finetune_dataset()
+    print(f"[보강 학습] 연산 장치: {DEVICE}, epoch={FINETUNE_EPOCHS}, lr={FINETUNE_LR}")
+    train(model, tok, data, epochs=FINETUNE_EPOCHS, lr=FINETUNE_LR)
+
+    after = evaluate_unseen(model, tok)[0]
+    after_score = weighted_unseen_score(after)
+    none_not_worse = after["명령 아님"][0] >= before["명령 아님"][0]
+    improved = after_score > before_score
+    print(f"보강 후 점수: {after}, 안전 가중 점수={after_score}")
+    if none_not_worse and improved:
+        save_model(model, keep_backup=True)
+        print("결과 채택: 명령 아님 점수가 유지되고 안전 가중 점수가 올랐습니다.")
+        return True
+
+    model.load_state_dict(before_state)
+    print("결과 보류: 명령 아님 점수가 떨어졌거나 안전 가중 점수가 개선되지 않았습니다.")
+    print("저장된 기존 체크포인트는 그대로 유지했습니다.")
+    return False
 
 
 def main():
-    if os.path.exists(SAVE):
-        tok = BertTokenizer.from_pretrained(OUT, do_lower_case=True)
-        model = Controller(BertModel(BertConfig.from_pretrained(OUT)))
-        model.load_state_dict(torch.load(SAVE)["state_dict"])
+    parser = argparse.ArgumentParser(description="BERT-Medium controller training")
+    parser.add_argument("--finetune", "--iterate", dest="finetune", action="store_true",
+                        help="현재 체크포인트에서 보강 학습 후 평가 기준으로 자동 채택/보류")
+    parser.add_argument("--no-interactive", action="store_true",
+                        help="평가 후 입력 대기 없이 종료")
+    args = parser.parse_args()
+
+    if args.finetune:
+        if not os.path.exists(SAVE):
+            raise SystemExit(f"이어 학습할 체크포인트가 없습니다: {SAVE}\n먼저 기본 학습을 실행하세요.")
+        tok, model = load_pruned_model()
+        print(f"기존 학습 모델에서 보강 학습: {SAVE}")
+        finetune_with_gate(tok, model)
+    elif os.path.exists(SAVE):
+        tok, model = load_pruned_model()
         print(f"학습된 모델을 불러왔습니다: {SAVE}")
     else:
         tok = AutoTokenizer.from_pretrained(BASE)
@@ -398,22 +538,22 @@ def main():
         keep_ids = build_vocab_ids(tok, [s for s, *_ in data])
         tok, base = prune(tok, base, keep_ids)
 
-        model = Controller(base)
-        print(f"[4단계] 학습 데이터 {len(data):,}문장, CPU로 시간이 걸릴 수 있습니다.")
+        model = Controller(base).to(DEVICE)
+        print(f"[4단계] 학습 데이터 {len(data):,}문장, 연산 장치: {DEVICE}")
         train(model, tok, data)
-        torch.save({"state_dict": model.state_dict(), "devices": DEVICES, "actions": ACTIONS,
-                    "max_len": MAX_LEN}, SAVE)
-        print(f"저장: {OUT} (vocab.txt, config.json, model_finetuned.pt)")
+        save_model(model)
 
     report_unseen(model, tok)
 
-    print("\n영어 문장을 입력하세요 (빈 줄이면 종료)")
-    while True:
-        s = input("> ").strip()
-        if not s:
-            break
-        print(predict(model, tok, s))
+    if not args.no_interactive:
+        print("\n영어 문장을 입력하세요 (빈 줄이면 종료)")
+        while True:
+            s = input("> ").strip()
+            if not s:
+                break
+            print(predict(model, tok, s))
 
 
 if __name__ == "__main__":
+    print(f"연산 장치: {DEVICE}" + (f" ({torch.cuda.get_device_name(0)})" if DEVICE.type == "cuda" else ""))
     main()

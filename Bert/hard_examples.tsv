@@ -1,0 +1,28 @@
+# text<TAB>device<TAB>action<TAB>amount
+# none rows use '-' for device and amount. Amount is an integer from 0 to 7.
+# Negative, prohibited, question, and status statements are not commands.
+dont shut the motor	-	none	-
+do not shut the motor	-	none	-
+never turn off the engine	-	none	-
+please do not stop the fan	-	none	-
+do not change the led	-	none	-
+should i shut the engine off	-	none	-
+is engine good	-	none	-
+does the motor sound okay	-	none	-
+how is the fan doing	-	none	-
+is the lamp already on	-	none	-
+what do you suggest for dinner	-	none	-
+this package feels light	-	none	-
+the fan was loud last night	-	none	-
+the motor was repaired yesterday	-	none	-
+i will return later	-	none	-
+# Clear command variants to balance the negative examples.
+halt the motor now	motor	off	0
+quit the engine now	motor	off	0
+spin the motor up	motor	on	7
+get the desk fan started	fan	on	7
+dim the desk lamp a little	led	change	2
+raise the motor speed a little	motor	change	5
+set the fan speed to half	fan	change	4
+run the engine at low speed	motor	on	2
+keep the lamp at medium	led	change	4

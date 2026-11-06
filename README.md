@@ -1,6 +1,6 @@
 # ESP32-S3 BERT Cluster
 
-ai: https://1drv.ms/u/c/09a71dc2aa7bfa58/IQCsVi3dmqDqQ5wyhk7g-aeCAb0ddoUg3yvbtwGJx5Z_ym8?e=rWUAFq
+ai: <https://1drv.ms/u/c/09a71dc2aa7bfa58/IQCsVi3dmqDqQ5wyhk7g-aeCAb0ddoUg3yvbtwGJx5Z_ym8?e=rWUAFq>
 Project notes and firmware examples for a Pico 1 controller and ESP32-S3
 inference nodes. See [the project brief](multi_esp_project_brief.md) for the
 system design and maturity labels.
@@ -70,15 +70,33 @@ The current firmware blinks the onboard LED for 25 ms on every keyboard
 character event as an input diagnostic.
 
 ------------------------------------
-training guide
-```
-sudo apt update && sudo apt install -y python3-venv python3-pip
-python3 -m venv ~/ai
-source ~/ai/bin/activate
-pip install torch --index-url https://download.pytorch.org/whl/cpu
-pip install transformers
+
+## BERT-Medium training
+
+Chronological Arch Linux WSL setup, virtual-environment activation, GPU check,
+first training, and later automated rounds are in [`Bert/README.md`](Bert/README.md).
+The active trainer is `Bert/medium_train_v2.py`.
+
+---
+
+## sierrastdio Windows Arch WSL training env
+
+Windows 본 프로젝트를 Arch WSL의 사용자 소유 Linux 경로로 복사해 학습합니다. **Arch WSL을 연 뒤** 아래 순서로 최초 준비합니다.
+
+```bash
+WIN_PROJECT=/mnt/c/Users/sierra/Documents/ESP32-S3-Bert-Kluster
+WSL_PROJECT="$HOME/projects/ESP32-S3-Bert-Kluster"
+mkdir -p "$WSL_PROJECT"
+cp -r "$WIN_PROJECT/." "$WSL_PROJECT/"
+chmod -R u+rwX "$WSL_PROJECT"
+cd "$WSL_PROJECT/Bert"
+if [ ! -f pytorch_model.bin ]; then cp ~/clone/ESP32-S3-Bert-Kluster/Bert/pytorch_model.bin .; fi
+bash setup_arch.sh cu132 # 최초 한 번: RTX 3060용 CUDA PyTorch와 패키지 설치
+source .venv/bin/activate
+python -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else '')"
+bash run_train.sh        # 최초 학습만; 저장 체크포인트가 있으면 평가만 함
 ```
 
-```
-python medium_train.py
-```
+NVIDIA GPU를 쓰려면 WSL에서 `nvidia-smi`를 확인하고, [PyTorch 공식 설치 안내](https://pytorch.org/get-started/locally/)에서 확인한 CUDA wheel 태그로 `bash setup_arch.sh cuXXX`를 실행합니다. 스크립트는 CUDA 사용 가능 여부에 따라 GPU 또는 CPU를 자동 선택합니다. 상세 안내는 [`Bert/README.md`](Bert/README.md)를 참고하세요.
+
+`~/clone`은 읽기 전용일 수 있으므로 학습은 `~/projects/ESP32-S3-Bert-Kluster` 복사본에서 진행합니다. 이후 새 WSL 터미널에서는 먼저 `cd "$HOME/projects/ESP32-S3-Bert-Kluster/Bert"`와 `source .venv/bin/activate`를 실행합니다. Windows 본 프로젝트의 `Bert/hard_examples.tsv`에 새 라벨 예시를 추가한 뒤 `bash train_cycle.sh`로 동기화·GPU 확인·보강 학습·검증·자동 채택/보류를 진행합니다. 데이터가 바뀌지 않으면 중복 학습은 건너뜁니다. 산출물은 WSL 복사본의 `Bert/pruned/`에 생깁니다. 상세 시간순 절차와 라벨 형식은 [`Bert/README.md`](Bert/README.md)를 참고하세요.
