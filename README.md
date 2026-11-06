@@ -1,5 +1,6 @@
 # ESP32-S3 BERT Cluster
 
+ai: https://1drv.ms/u/c/09a71dc2aa7bfa58/IQCsVi3dmqDqQ5wyhk7g-aeCAb0ddoUg3yvbtwGJx5Z_ym8?e=rWUAFq
 Project notes and firmware examples for a Pico 1 controller and ESP32-S3
 inference nodes. See [the project brief](multi_esp_project_brief.md) for the
 system design and maturity labels.
