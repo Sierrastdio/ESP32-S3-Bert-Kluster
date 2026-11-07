@@ -73,7 +73,7 @@ character event as an input diagnostic.
 
 ## sierrastdio Windows Arch WSL training env
 
-Claude/Codex와 Git은 Windows 본 프로젝트에서 사용하고, 학습은 Arch WSL의 Linux 복사본에서 합니다. **PyTorch/CUDA 설치, 원본 BERT 파일 준비 등 최초 환경 설정은** [`Bert/WSL_SETUP.md`](Bert/WSL_SETUP.md)에 따릅니다. 아래는 환경 설치 이후 학습에 사용하는 명령입니다.
+Claude/Codex와 Git은 Windows 본 프로젝트에서 사용하고, 학습은 Arch WSL의 Linux 복사본에서 합니다. **PyTorch/CUDA 설치, 원본 BERT 파일 준비 등 최초 환경 설정은** [`Bert/WSL_SETUP.md`](Bert/WSL_SETUP.md)에 따릅니다. `hard_examples.tsv` 작성법은 [`Bert/HARD_EXAMPLES_GUIDE.md`](Bert/HARD_EXAMPLES_GUIDE.md)에 있습니다. 아래는 환경 설치 이후 학습에 사용하는 명령입니다.
 
 ```bash
 WIN_PROJECT=/mnt/c/Users/sierra/Documents/ESP32-S3-Bert-Kluster

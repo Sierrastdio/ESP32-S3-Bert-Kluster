@@ -53,10 +53,7 @@ Windows project (학습 결과 검토 및 Git 작업)
    bash "$WIN_PROJECT/Bert/sync_from_wsl.sh"
    ```
 
-3. **보강 학습 전에 Windows의 `Bert/hard_examples.tsv`를 수정하고 저장합니다.** 보강 학습은 기존 `pruned/model_finetuned.pt`에서 출발해 오답 유형을 추가 학습한 뒤, 평가 점수에 따라 새 모델을 채택하거나 기존 모델을 유지합니다.
-
-   - Windows에서 `C:\Users\sierra\Documents\ESP32-S3-Bert-Kluster\Bert\hard_examples.tsv`를 VS Code나 메모장으로 엽니다. WSL 복사본이 아니라 **Windows 프로젝트의 이 파일만** 편집합니다. 첫 줄은 열 안내용 주석입니다. 각 데이터 줄은 `문장<TAB>device<TAB>action<TAB>amount` 순서이고, `<TAB>` 자리에 실제 탭을 넣습니다. 헤더 행을 추가하지 않습니다.
-   - 모델의 오답 문장을 그대로 복사하기보다는 같은 의도를 가진 새 영어 표현을 쓰고 라벨을 직접 정합니다. 예를 들어 팬을 켜서 세기 7로 하라는 예시는 `start the desk fan<TAB>fan<TAB>on<TAB>7`, 명령이 아닌 질문은 `should I start the desk fan<TAB>-<TAB>none<TAB>-`입니다. 문장과 라벨 사이를 탭으로 나누고, 파일을 저장합니다. 허용 라벨과 양의 의미는 아래 TSV 설명을 따릅니다.
+3. **보강 학습 전에 TSV를 편집합니다.** Windows 프로젝트의 `Bert/hard_examples.tsv`를 열어 새 예시를 입력하고 저장합니다. 편집 위치, 탭 입력 방법, 라벨 기준, 작성 예시는 별도 문서 [`HARD_EXAMPLES_GUIDE.md`](HARD_EXAMPLES_GUIDE.md)에 있습니다.
 
 4. **WSL에서 자동 보강 회차를 실행하고 Windows에서 결과를 확인합니다.** 이 스크립트가 Windows 저장소를 WSL에 동기화하고, 보강 학습·비교·채택/보류 후 WSL 저장소를 Windows에 동기화합니다.
 
@@ -108,22 +105,6 @@ WSL에서 코드를 수정한 경우도 `sync_from_wsl.sh`가 Windows 쪽 같은
 
 `test acc`는 생성된 문장 분할의 점수라 유사한 문장 패턴을 학습 데이터와 공유할 수 있습니다. 실제 새로운 표현에 대한 성능 판단은 고정 `UNSEEN` 결과와 별도로 보유한 새 문장 평가를 함께 보세요. 보강 학습의 채택/보류 판단은 epoch의 `test acc`만으로 하지 않고, 위의 종료 요약 점수에 기반합니다.
 
-## `hard_examples.tsv` 작성법
+## TSV 편집
 
-열 순서는 `text`, `device`, `action`, `amount`이며 탭 문자로 나눕니다. 헤더는 쓰지 않습니다. 빈 줄과 `#`으로 시작하는 주석은 무시됩니다.
-
-| 열 | 허용 값 | 뜻 |
-| --- | --- | --- |
-| `text` | 영어 문장 | 입력 문장 |
-| `device` | `led`, `motor`, `fan`, `-` | 장치. `none`이면 `-` |
-| `action` | `on`, `off`, `change`, `none` | 의도한 동작 |
-| `amount` | `0`~`7`, `-` | 목표 세기. `none`이면 `-` |
-
-예를 들어 팬의 바람을 줄여야 한다는 뜻은 `fan/change/2`입니다. `2`는 두 단계 내리라는 뜻이 아니라 목표 세기를 2로 맞추라는 뜻입니다.
-
-```text
-the fan is blowing things off the table<TAB>fan<TAB>change<TAB>2
-should i turn off the fan<TAB>-<TAB>none<TAB>-
-```
-
-`<TAB>`은 설명용 표기입니다. 실제 파일에는 그 자리에 탭 문자를 입력합니다. `on`은 켠 뒤 목표 세기(일반적으로 7), `off`는 0, `change`는 변경 후 목표 레벨을 적습니다. 학습 문장을 `vocab.txt`에 넣지 마세요. 토큰 어휘와 임베딩 행은 학습 스크립트가 함께 구성합니다.
+`hard_examples.tsv`의 입력 규칙은 [`HARD_EXAMPLES_GUIDE.md`](HARD_EXAMPLES_GUIDE.md)를 참고하세요. 학습 예문을 `vocab.txt`에 추가하지 않습니다. 학습 코드가 학습 문장에 필요한 토큰을 어휘에 반영합니다.
