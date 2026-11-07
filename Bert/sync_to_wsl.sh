@@ -15,11 +15,11 @@ if [[ ! -w "$WSL_PROJECT" ]]; then
   exit 1
 fi
 
-# Windows is the source of code/data. Preserve WSL-only environment and training outputs.
+# Copy the repository in full, preserving only Git metadata and the WSL-only venv.
 tar -C "$WIN_PROJECT" \
   --exclude-vcs \
+  --exclude='./.git.disabled.*' \
   --exclude='./Bert/.venv' \
-  --exclude='./Bert/pruned' \
   --exclude='./pico1/build*' \
   --exclude='./pico1/CMakeFiles' \
   -cf - . | tar -C "$WSL_PROJECT" -xf -
@@ -31,4 +31,4 @@ if [[ -d "$WSL_PROJECT/.git" ]]; then
   echo "WSL Git metadata parked at $(basename "$DISABLED_GIT"); use the Windows project for Git."
 fi
 echo "Windows project synced to WSL: $WSL_PROJECT"
-echo "Excluded and preserved: .git, Bert/.venv, Bert/pruned, Pico build outputs"
+echo "Excluded and preserved: Git metadata, Bert/.venv, Pico build outputs"

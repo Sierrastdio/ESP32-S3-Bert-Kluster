@@ -3,10 +3,8 @@ set -euo pipefail
 
 WIN_PROJECT="${WIN_PROJECT:-/mnt/c/Users/sierra/Documents/ESP32-S3-Bert-Kluster}"
 WSL_PROJECT="${WSL_PROJECT:-$HOME/projects/ESP32-S3-Bert-Kluster}"
-MODE="${1:-}"
-
-if [[ -n "$MODE" && "$MODE" != "--sync-only" ]]; then
-  echo "Usage: bash train_cycle.sh [--sync-only]" >&2
+if [[ $# -ne 0 ]]; then
+  echo "Usage: bash train_cycle.sh" >&2
   exit 2
 fi
 if [[ ! -d "$WIN_PROJECT" ]]; then
@@ -18,11 +16,6 @@ fi
 bash "$WIN_PROJECT/Bert/sync_to_wsl.sh"
 WSL_BERT="$WSL_PROJECT/Bert"
 cd "$WSL_BERT"
-
-if [[ "$MODE" == "--sync-only" ]]; then
-  bash "$WIN_PROJECT/Bert/sync_from_wsl.sh"
-  exit 0
-fi
 
 if [[ ! -x .venv/bin/python ]]; then
   echo "Python environment missing. Run once: bash setup_arch.sh cu132" >&2

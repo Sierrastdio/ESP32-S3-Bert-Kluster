@@ -69,32 +69,24 @@ Hold BOOTSEL while connecting the Pico over USB, then copy the UF2 to the
 The current firmware blinks the onboard LED for 25 ms on every keyboard
 character event as an input diagnostic.
 
-------------------------------------
-
-## BERT-Medium training
-
-Chronological Arch Linux WSL setup, virtual-environment activation, GPU check,
-first training, and later automated rounds are in [`Bert/README.md`](Bert/README.md).
-The active trainer is `Bert/medium_train_v2.py`.
-
 ---
 
 ## sierrastdio Windows Arch WSL training env
 
-Claude/Codex와 Git은 Windows 본 프로젝트에서 사용하고, 학습은 Arch WSL의 Linux 복사본에서 합니다. **Arch WSL을 연 뒤** 최초 설정은 다음 순서입니다.
+Claude/Codex와 Git은 Windows 본 프로젝트에서 사용하고, 학습은 Arch WSL의 Linux 복사본에서 합니다. **PyTorch/CUDA 설치, 원본 BERT 파일 준비 등 최초 환경 설정은** [`Bert/WSL_SETUP.md`](Bert/WSL_SETUP.md)에 따릅니다. 아래는 환경 설치 이후 학습에 사용하는 명령입니다.
 
 ```bash
 WIN_PROJECT=/mnt/c/Users/sierra/Documents/ESP32-S3-Bert-Kluster
 WSL_PROJECT="$HOME/projects/ESP32-S3-Bert-Kluster"
 bash "$WIN_PROJECT/Bert/sync_to_wsl.sh"
 cd "$WSL_PROJECT/Bert"
-if [ ! -f pytorch_model.bin ]; then cp ~/clone/ESP32-S3-Bert-Kluster/Bert/pytorch_model.bin .; fi
-bash setup_arch.sh cu132 # 최초 한 번: RTX 3060용 CUDA PyTorch와 패키지 설치
 source .venv/bin/activate
-python -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else '')"
-bash run_train.sh
-bash "$WIN_PROJECT/Bert/sync_from_wsl.sh" # pruned 결과를 Windows로 가져오기
+python -c "import torch; print(torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CUDA unavailable')"
+bash run_train.sh --no-interactive # 최초 학습: pruned 체크포인트가 없을 때
+bash "$WIN_PROJECT/Bert/sync_from_wsl.sh" # WSL 저장소를 Windows로 동기화
 ```
+
+`pruned/model_finetuned.pt`가 이미 있으면 `bash run_train.sh`는 기본적으로 학습하지 않고 모델을 불러와 평가합니다. 보강 학습은 아래 자동 회차 명령을 사용합니다.
 
 최초 설정 후에는 Windows에서 코드와 `Bert/hard_examples.tsv`를 수정·저장하고, WSL에서 아래를 실행해 한 학습 회차를 돌립니다.
 
@@ -104,4 +96,4 @@ source .venv/bin/activate
 bash /mnt/c/Users/sierra/Documents/ESP32-S3-Bert-Kluster/Bert/train_cycle.sh
 ```
 
-`sync_to_wsl.sh`는 `.git`, `.venv`, WSL `Bert/pruned/`를 덮어쓰지 않습니다. `sync_from_wsl.sh`는 학습 산출물만 Windows로 가져옵니다. GitHub push는 Windows 저장소에서만 합니다. 상세 시간순 절차와 라벨 형식은 [`Bert/README.md`](Bert/README.md)를 참고하세요.
+`sync_to_wsl.sh`는 Windows 저장소를 WSL로, `sync_from_wsl.sh`는 WSL 저장소를 Windows로 동기화합니다. 두 명령 모두 `.git`, WSL 전용 `Bert/.venv`, Pico 빌드 결과를 보존하고, `Bert/pruned/`와 원본 모델 가중치를 포함한 나머지 파일을 복사합니다. 같은 경로 파일은 덮어쓰지만 대상 쪽에만 있는 파일은 삭제하지 않습니다. GitHub push는 Windows 저장소에서만 합니다. 상세 시간순 절차와 라벨 형식은 [`Bert/README.md`](Bert/README.md)를 참고하세요.
