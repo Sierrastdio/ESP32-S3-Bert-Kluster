@@ -64,7 +64,7 @@ Windows project (학습 결과 검토 및 Git 작업)
 
    출력에 `입력 코드와 hard_examples.tsv가 이전 회차와 같습니다. 학습을 건너뜁니다.`가 나오면 Windows TSV가 저장됐는지, 올바른 Windows 파일을 수정했는지 확인합니다. 입력이 바뀐 회차만 학습합니다.
 
-   Windows `Bert/pruned/last_train_cycle.log`에서 보강 전후 점수와 `결과 채택` 또는 `결과 보류`를 확인하고, `Bert/latest_unseen_errors.tsv`에서 남은 고정 평가 오답을 확인합니다. `결과 보류`면 기존 체크포인트가 유지된 것입니다.
+   Windows `Bert/pruned/last_train_cycle.log`에서 보강 전후 점수와 `결과 채택` 또는 `결과 보류`를 확인하고, `Bert/pruned/last_unseen_errors.tsv`에서 남은 고정 평가 오답을 확인합니다. `결과 보류`면 기존 체크포인트가 유지된 것입니다.
 
 ### 저장소 동기화 명령
 

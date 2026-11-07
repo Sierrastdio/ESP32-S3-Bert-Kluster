@@ -23,12 +23,5 @@ tar -C "$WSL_PROJECT" \
   --exclude='./pico1/CMakeFiles' \
   -cf - . | tar -C "$WIN_PROJECT" -xf -
 
-for file in last_unseen_errors.tsv last_train_cycle.log; do
-  if [[ -f "$WSL_PROJECT/Bert/pruned/$file" ]]; then
-    destination="latest_${file#last_}"
-    cp "$WSL_PROJECT/Bert/pruned/$file" "$WIN_PROJECT/Bert/$destination"
-  fi
-done
-
 echo "WSL project synced to Windows: $WIN_PROJECT"
 echo "Excluded and preserved: Git metadata, Bert/.venv, Pico build outputs"
