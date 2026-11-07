@@ -85,7 +85,7 @@ TSV를 바꾼 뒤 보강 학습은 실제로 실행됐지만, 새 결과는 채�
 
 예를 들어 이번 결과는 보강 전 점수 83에서 보강 후 74로 내려갔고, 명령 아님도 23/25에서 20/25로 줄었으므로, 그래서 기존 가중치를 복원하고 저장을 보류하게됩니다. epoch 로그의 test acc 100%는 채택 기준이 아닙니다. 첫 epoch loss nan도 있었으니 이번 학습 결과가 좋았다고 볼 수는 없습니다.
 
-따라서 새 결과가 채택될 때만 기존 모델을 model_finetuned_before_날짜시간.pt로 백업하고, model_finetuned.pt를 새 가중치로 교체하게 됩니다. 이 저장·채택 로직은 [medium_train_v2.py (line 751)](/C:/Users/sierra/Documents/ESP32-S3-Bert-Kluster/Bert/medium_train_v2.py:751)와 [보강 학습 판정 부분 (line 774)](/C:/Users/sierra/Documents/ESP32-S3-Bert-Kluster/Bert/medium_train_v2.py:774)에 있습니다.
+따라서 새 결과가 채택될 때만 기존 모델을 model_finetuned_before_날짜시간.pt로 백업하고, model_finetuned.pt를 새 가중치로 교체하게 됩니다. 이 저장·채택 로직은 [medium_train_v2.py (line 751)](/ESP32-S3-Bert-Kluster/Bert/medium_train_v2.py:751)와 [보강 학습 판정 부분 (line 774)](/ESP32-S3-Bert-Kluster/Bert/medium_train_v2.py:774)에 있습니다.
 
 참고로 회차 스크립트는 결과가 보류되어도 그 입력으로 회차가 끝나면 TSV 서명을 기록합니다. TSV를 그대로 둔 채 다시 실행하면 같은 입력이라 학습을 건너뛸 수 있습니다.
 

@@ -1,6 +1,6 @@
 # Arch WSL 최초 환경 준비
 
-이 문서는 BERT 학습 환경을 **처음 한 번** 준비할 때 사용합니다. 매 학습 회차의 실행 순서는 [`README.md`](README.md)를 따르세요.
+이 문서는 BERT 학습 환경을 **처음 한 번** 준비할 때 사용합니다. 매 학습 회차의 실행 순서는 [`README_MAIN.md`](README_MAIN.md)를 따르세요.
 
 ## 준비 내용
 
@@ -56,4 +56,4 @@ python -c "import torch; print(torch.__version__); print(torch.cuda.is_available
 
 RTX 3060 환경에서는 `2.15.0+cu132`, `True`, `NVIDIA GeForce RTX 3060 ...`이 표시되어야 합니다. 새 WSL 터미널을 열 때는 프로젝트를 동기화하고 `cd "$WSL_PROJECT/Bert"` 한 뒤 가상환경을 다시 활성화합니다. `run_train.sh`는 `.venv` Python을 직접 호출하므로 활성화는 편의를 위한 절차입니다.
 
-환경이 준비되면 최초 학습과 보강 학습은 [`README.md`](README.md)의 단계별 절차를 따르세요.
+환경이 준비되면 최초 학습과 보강 학습은 [`README_MAIN.md`](README_MAIN.md)의 단계별 절차를 따르세요.

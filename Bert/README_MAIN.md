@@ -14,6 +14,8 @@ Windows project (학습 결과 검토 및 Git 작업)
 
 `sync_to_wsl.sh`는 Windows 저장소 파일을 WSL로 복사하고, `sync_from_wsl.sh`는 WSL의 `Bert/pruned/`만 Windows로 가져옵니다. 두 명령 모두 같은 경로의 대상 파일을 덮어쓰지만 대상에만 있는 파일은 삭제하지 않습니다. Windows의 README·TSV·소스 코드는 `sync_from_wsl.sh`로 덮어써지지 않습니다. Git에서는 `.gitignore`에 따라 `Bert/pruned/*.pt` 체크포인트만 제외하고 학습 로그·오답 TSV·설정·어휘는 공유합니다. Git 작업은 Windows 저장소에서 합니다.
 
+`sync_to_wsl.sh` 실행 시 WSL 프로젝트에 기존 `.git` 디렉터리가 있으면 `.git.disabled.날짜시간`으로 이름을 바꿔 보관합니다. Windows 프로젝트만 Git 작업에 사용하기 위한 처리입니다.
+
 ## 개발·학습 절차 (최대 5단계)
 
 최초 PyTorch/CUDA 설치, 원본 모델 파일 준비, 가상환경 설정은 별도 문서인 [`README_WSL_SETUP.md`](README_WSL_SETUP.md)에 있습니다. 아래 학습 절차는 그 환경이 이미 준비됐다고 가정합니다. 모든 학습 명령은 **Arch WSL 터미널**에서 실행합니다.
