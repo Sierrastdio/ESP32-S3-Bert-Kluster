@@ -1,6 +1,12 @@
 # text <TAB> device <TAB> action <TAB> amount
+#
 # none rows use '-' for device and amount. Amount is an integer from 0 to 7.
+#
 # Negative, prohibited, question, and status statements are not commands.
+#
+# 특정 문구는 이미 medium_train_v2.py에서 '고정 평가'로 등록된것일수도 있는데, 
+# 이를 이곳에 한번더 기재하면 충돌을 일으켜 학습이 시작되지 않음으로 주의.
+# vocab.txt 에 있는 어휘로만 조합되었는지 비교하는 파이썬 스크립트가 필요할듯.
 dont shut the motor	-	none	-
 do not shut the motor	-	none	-
 never turn off the engine	-	none	-
@@ -16,7 +22,6 @@ this package feels light	-	none	-
 the fan was loud last night	-	none	-
 the motor was repaired yesterday	-	none	-
 i will return later	-	none	-
-# Clear command variants to balance the negative examples.
 halt the motor now	motor	off	0
 quit the engine now	motor	off	0
 spin the motor up	motor	on	7
@@ -26,3 +31,4 @@ raise the motor speed a little	motor	change	5
 set the fan speed to half	fan	change	4
 run the engine at low speed	motor	on	2
 keep the lamp at medium	led	change	4
+the motor is shaking	motor	change	4

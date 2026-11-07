@@ -1,0 +1,25 @@
+group	sentence	expected	predicted
+직접 명령	can i get some light in here	led/on/7	led/change/7
+직접 명령	tone down the lamp	led/change/2	led/off/2
+직접 명령	bump the light up a notch	led/change/5	led/on/6
+직접 명령	spin up the rotor	motor/on/7	fan/on/7
+직접 명령	run the motor at quarter speed	motor/on/2	motor/on/7
+직접 명령	i want the fan running at medium	fan/on/4	fan/change/4
+직접 명령	enough with the fan	fan/off/0	fan/change/7
+애매한 표현	it is sweltering in here	fan/on/6	none
+애매한 표현	this heat is unbearable	fan/on/6	none
+애매한 표현	i am dripping with sweat	fan/on/6	none
+애매한 표현	the air is heavy	fan/on/4	none
+애매한 표현	i need a sweater	fan/off/0	none
+애매한 표현	the fan is blowing my papers away	fan/change/2	fan/off/0
+애매한 표현	the room is gloomy	led/on/7	none
+애매한 표현	the lights are blinding	led/change/2	none
+애매한 표현	my eyes hurt	led/change/2	fan/change/0
+애매한 표현	good night	led/off/0	none
+애매한 표현	the motor is making a racket	motor/change/2	none
+애매한 표현	the engine is screaming	motor/change/2	none
+애매한 표현	the motor is crawling	motor/change/6	none
+애매한 표현	the motor smells hot	motor/off/0	motor/on/0
+애매한 표현	something is wrong with the engine	motor/off/0	none
+명령 아님	i will be back soon	none	led/off/0
+명령 아님	is the fan on	none	fan/on/7

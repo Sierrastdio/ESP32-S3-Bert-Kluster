@@ -35,7 +35,7 @@ fi
 ls -lh config.json vocab.txt pytorch_model.bin
 ```
 
-다른 safetensors 가중치 파일을 사용하는 경우 위 `cp`와 `ls` 명령의 파일명을 실제 파일명으로 바꾸세요. 최초 학습 후 WSL→Windows 전체 저장소 동기화를 실행하면 clone에서 복사한 원본 파일도 Windows 프로젝트로 들어옵니다.
+다른 safetensors 가중치 파일을 사용하는 경우 위 `cp`와 `ls` 명령의 파일명을 실제 파일명으로 바꾸세요. `sync_from_wsl.sh`는 학습 결과인 `Bert/pruned/`만 Windows로 복사하므로, clone에서 가져온 원본 가중치는 WSL 프로젝트에 남습니다.
 
 ## 3. RTX 3060용 Python 가상환경 설치
 

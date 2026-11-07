@@ -1,11 +1,11 @@
 연산 장치: cuda (NVIDIA GeForce RTX 3060 Laptop GPU)
 기존 학습 모델에서 보강 학습: /home/sierrastdio/projects/ESP32-S3-Bert-Kluster/Bert/pruned/model_finetuned.pt
 보강 전 점수: {'직접 명령': (27, 34), '애매한 표현': (10, 25), '명령 아님': (23, 25)}, 안전 가중 점수=83
-[보강] /home/sierrastdio/projects/ESP32-S3-Bert-Kluster/Bert/hard_examples.tsv에서 어려운 예시 24개를 5회 반복 추가
+[보강] /home/sierrastdio/projects/ESP32-S3-Bert-Kluster/Bert/hard_examples.tsv에서 어려운 예시 25개를 5회 반복 추가
 [보강 학습] 연산 장치: cuda, epoch=2, lr=5e-06
-  epoch 1/2  loss 0.036  test acc 99.6%  처음 보는 문장 acc 70.2% (양까지 정확히 일치 기준)
-  epoch 2/2  loss 0.025  test acc 99.6%  처음 보는 문장 acc 70.2% (양까지 정확히 일치 기준)
-보강 후 점수: {'직접 명령': (26, 34), '애매한 표현': (10, 25), '명령 아님': (23, 25)}, 안전 가중 점수=82
+  epoch 1/2  loss nan  test acc 100.0%  처음 보는 문장 acc 63.1% (양까지 정확히 일치 기준)
+  epoch 2/2  loss 0.033  test acc 100.0%  처음 보는 문장 acc 64.3% (양까지 정확히 일치 기준)
+보강 후 점수: {'직접 명령': (25, 34), '애매한 표현': (9, 25), '명령 아님': (20, 25)}, 안전 가중 점수=74
 결과 보류: 명령 아님 점수가 떨어졌거나 안전 가중 점수가 개선되지 않았습니다.
 저장된 기존 체크포인트는 그대로 유지했습니다.
 

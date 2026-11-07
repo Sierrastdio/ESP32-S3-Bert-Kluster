@@ -12,7 +12,7 @@ WSL project (Python .venv, base weights, pruned, GPU training)
 Windows project (학습 결과 검토 및 Git 작업)
 ```
 
-두 명령은 각각 저장소 파일을 한 방향으로 복사합니다. 같은 경로의 파일은 덮어쓰지만, 대상 쪽에만 있는 파일을 삭제하지는 않습니다. `.git`, WSL 전용 `Bert/.venv`, Pico 빌드 결과만 복사에서 제외하고, `Bert/pruned/`와 원본 모델 가중치를 포함한 나머지 파일은 복사합니다. Git에서는 `.gitignore`에 따라 `Bert/pruned/*.pt` 체크포인트만 제외하고 학습 로그·오답 TSV·설정·어휘는 공유합니다. Git 작업은 Windows 저장소에서 합니다.
+`sync_to_wsl.sh`는 Windows 저장소 파일을 WSL로 복사하고, `sync_from_wsl.sh`는 WSL의 `Bert/pruned/`만 Windows로 가져옵니다. 두 명령 모두 같은 경로의 대상 파일을 덮어쓰지만 대상에만 있는 파일은 삭제하지 않습니다. Windows의 README·TSV·소스 코드는 `sync_from_wsl.sh`로 덮어써지지 않습니다. Git에서는 `.gitignore`에 따라 `Bert/pruned/*.pt` 체크포인트만 제외하고 학습 로그·오답 TSV·설정·어휘는 공유합니다. Git 작업은 Windows 저장소에서 합니다.
 
 ## 개발·학습 절차 (최대 5단계)
 
@@ -47,7 +47,7 @@ Windows project (학습 결과 검토 및 Git 작업)
    bash run_train.sh --no-interactive
    ```
 
-   최초 학습이 끝나면 WSL 저장소와 새 모델 결과를 Windows로 가져옵니다.
+   최초 학습이 끝나면 WSL의 `pruned/` 결과만 Windows로 가져옵니다. Windows의 README, TSV, 소스 코드는 덮어쓰지 않습니다.
 
    ```bash
    bash "$WIN_PROJECT/Bert/sync_from_wsl.sh"
@@ -55,7 +55,7 @@ Windows project (학습 결과 검토 및 Git 작업)
 
 3. **보강 학습 전에 TSV를 편집합니다.** Windows 프로젝트의 `Bert/hard_examples.tsv`를 열어 새 예시를 입력하고 저장합니다. 편집 위치, 탭 입력 방법, 라벨 기준, 작성 예시는 별도 문서 [`README_HARD_EXAMPLES_GUIDE.md`](README_HARD_EXAMPLES_GUIDE.md)에 있습니다.
 
-4. **WSL에서 자동 보강 회차를 실행하고 Windows에서 결과를 확인합니다.** 이 스크립트가 Windows 저장소를 WSL에 동기화하고, 보강 학습·비교·채택/보류 후 WSL 저장소를 Windows에 동기화합니다.
+4. **WSL에서 자동 보강 회차를 실행하고 Windows에서 결과를 확인합니다.** 이 스크립트가 Windows 저장소를 WSL에 동기화하고, 보강 학습·비교·채택/보류 후 WSL의 `Bert/pruned/`만 Windows로 복사합니다.
 
    ```bash
    WIN_PROJECT=/mnt/c/Users/sierra/Documents/ESP32-S3-Bert-Kluster
@@ -74,17 +74,17 @@ Windows 프로젝트에서 WSL 프로젝트로 저장소 파일을 복사합니�
 bash "$WIN_PROJECT/Bert/sync_to_wsl.sh"
 ```
 
-WSL에서 Windows 프로젝트로 저장소 파일과 학습 결과를 복사합니다. WSL 파일이 같은 경로의 Windows 파일을 덮어씁니다.
+WSL에서 Windows 프로젝트로 학습 결과 폴더만 복사합니다. WSL의 `Bert/pruned/` 파일은 같은 경로의 Windows `Bert/pruned/` 파일을 덮어씁니다. Windows의 README, TSV, 소스 코드 등은 건드리지 않습니다.
 
 ```bash
 bash /mnt/c/Users/sierra/Documents/ESP32-S3-Bert-Kluster/Bert/sync_from_wsl.sh
 ```
 
-WSL에서 코드를 수정한 경우도 `sync_from_wsl.sh`가 Windows 쪽 같은 경로를 덮어쓰므로, 저장소 전체 동기화 전에 원하는 변경본이 있는 방향을 확인합니다. `.git`, `.venv`, Pico 빌드 결과는 두 방향 모두 제외됩니다. Git 작업과 GitHub push는 Windows 프로젝트에서 합니다.
+코드·README·TSV를 WSL에서 수정해도 이 명령은 가져오지 않습니다. 그 파일들은 Windows 프로젝트에서 편집하고 `sync_to_wsl.sh`로 WSL에 보냅니다. Git 작업과 GitHub push는 Windows 프로젝트에서 합니다.
 
 ## 학습과 자동 채택 기준
 
-`bash run_train.sh`는 저장 모델이 있으면 옵션 없이 실행할 때 평가만 합니다. 최초 학습은 저장 모델이 없을 때 `bash run_train.sh --no-interactive`로 실행합니다. 보강 학습은 `train_cycle.sh`가 `run_train.sh --iterate --no-interactive`로 실행합니다. 기존 학습 예시와 TSV 예시를 섞어 보강 학습하고, 고정 평가셋으로 이전 모델과 비교합니다. `명령 아님` 점수가 내려가거나 `직접 명령 + 애매한 표현 + 2 × 명령 아님` 점수가 개선되지 않으면 기존 체크포인트를 유지합니다. 채택 시 이전 체크포인트는 `pruned/model_finetuned_before_날짜시간.pt`로 백업됩니다. 자동 회차는 완료 시 저장소 전체 동기화도 수행합니다.
+`bash run_train.sh`는 저장 모델이 있으면 옵션 없이 실행할 때 평가만 합니다. 최초 학습은 저장 모델이 없을 때 `bash run_train.sh --no-interactive`로 실행합니다. 보강 학습은 `train_cycle.sh`가 `run_train.sh --iterate --no-interactive`로 실행합니다. 기존 학습 예시와 TSV 예시를 섞어 보강 학습하고, 고정 평가셋으로 이전 모델과 비교합니다. `명령 아님` 점수가 내려가거나 `직접 명령 + 애매한 표현 + 2 × 명령 아님` 점수가 개선되지 않으면 기존 체크포인트를 유지합니다. 채택 시 이전 체크포인트는 `pruned/model_finetuned_before_날짜시간.pt`로 백업됩니다. 자동 회차는 완료 시 `pruned/`만 Windows에 복사합니다.
 
 평가 오답은 `pruned/last_unseen_errors.tsv`, 회차 로그는 `pruned/last_train_cycle.log`에 기록됩니다. 이 고정 평가셋은 반복 튜닝용이므로 최종 성능 확인에는 학습과 튜닝에 사용하지 않은 별도 문장도 준비하세요. 평가 문장을 그대로 학습 TSV에 복사하면 안 됩니다. 의미가 비슷한 새 문장을 만들고 사람이 정답 라벨을 정합니다.
 
