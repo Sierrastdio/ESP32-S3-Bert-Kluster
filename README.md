@@ -73,7 +73,7 @@ character event as an input diagnostic.
 
 ## sierrastdio Windows Arch WSL training env
 
-Claude/Codex와 Git은 Windows 본 프로젝트에서 사용하고, 학습은 Arch WSL의 Linux 복사본에서 합니다. **PyTorch/CUDA 설치, 원본 BERT 파일 준비 등 최초 환경 설정은** [`Bert/WSL_SETUP.md`](Bert/WSL_SETUP.md)에 따릅니다. `hard_examples.tsv` 작성법은 [`Bert/HARD_EXAMPLES_GUIDE.md`](Bert/HARD_EXAMPLES_GUIDE.md)에 있습니다. 아래는 환경 설치 이후 학습에 사용하는 명령입니다.
+Claude/Codex와 Git은 Windows 본 프로젝트에서 사용하고, 학습은 Arch WSL의 Linux 복사본에서 합니다. **PyTorch/CUDA 설치, 원본 BERT 파일 준비 등 최초 환경 설정은** [`Bert/README_WSL_SETUP.md`](Bert/README_WSL_SETUP.md)에 따릅니다. `hard_examples.tsv` 작성법은 [`Bert/README_HARD_EXAMPLES_GUIDE.md`](Bert/README_HARD_EXAMPLES_GUIDE.md)에 있습니다. 아래는 환경 설치 이후 학습에 사용하는 명령입니다.
 
 ```bash
 WIN_PROJECT=/mnt/c/Users/sierra/Documents/ESP32-S3-Bert-Kluster
@@ -96,4 +96,4 @@ source .venv/bin/activate
 bash /mnt/c/Users/sierra/Documents/ESP32-S3-Bert-Kluster/Bert/train_cycle.sh
 ```
 
-`sync_to_wsl.sh`는 Windows 저장소를 WSL로, `sync_from_wsl.sh`는 WSL 저장소를 Windows로 동기화합니다. 두 명령 모두 `.git`, WSL 전용 `Bert/.venv`, Pico 빌드 결과를 보존하고, `Bert/pruned/`와 원본 모델 가중치를 포함한 나머지 파일을 복사합니다. 같은 경로 파일은 덮어쓰지만 대상 쪽에만 있는 파일은 삭제하지 않습니다. GitHub push는 Windows 저장소에서만 합니다. 상세 시간순 절차와 라벨 형식은 [`Bert/README.md`](Bert/README.md)를 참고하세요.
+`sync_to_wsl.sh`는 Windows 저장소를 WSL로, `sync_from_wsl.sh`는 WSL 저장소를 Windows로 동기화합니다. 두 명령 모두 `.git`, WSL 전용 `Bert/.venv`, Pico 빌드 결과를 보존하고, `Bert/pruned/`와 원본 모델 가중치를 포함한 나머지 파일을 복사합니다. Git에서는 `Bert/pruned/*.pt` 체크포인트만 제외하고 로그와 평가 자료 등은 공유합니다. 같은 경로 파일은 덮어쓰지만 대상 쪽에만 있는 파일은 삭제하지 않습니다. GitHub push는 Windows 저장소에서만 합니다. 상세 절차는 [`Bert/README_MAIN.md`](Bert/README_MAIN.md)를 참고하세요.

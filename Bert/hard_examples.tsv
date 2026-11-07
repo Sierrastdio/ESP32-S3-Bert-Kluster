@@ -1,4 +1,4 @@
-# text<TAB>device<TAB>action<TAB>amount
+# text <TAB> device <TAB> action <TAB> amount
 # none rows use '-' for device and amount. Amount is an integer from 0 to 7.
 # Negative, prohibited, question, and status statements are not commands.
 dont shut the motor	-	none	-

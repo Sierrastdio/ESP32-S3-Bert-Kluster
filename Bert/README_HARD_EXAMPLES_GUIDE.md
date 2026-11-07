@@ -18,6 +18,9 @@ VS Code나 메모장으로 열고 UTF-8 텍스트로 저장합니다. WSL의 복
 
 ```text
 영어 문장<TAB>장치<TAB>동작<TAB>목표 세기
+
+예:
+please do not stop the fan<TAB>-<TAB>none<TAB>-
 ```
 
 `<TAB>`은 탭 키로 입력하는 구분자라는 뜻입니다. 글자 그대로 `<TAB>`이라고 쓰지 않습니다. 각 행에는 탭 구분자가 정확히 3개 있어야 하고, 문장 안에는 탭을 넣지 않습니다. 첫 행을 헤더로 바꾸거나 열 이름 행을 추가하지 않습니다. 주석을 쓰려면 행 맨 앞에 `#`을 둡니다. 빈 줄과 주석 행은 무시됩니다.
@@ -31,7 +34,7 @@ VS Code나 메모장으로 열고 UTF-8 텍스트로 저장합니다. WSL의 복
 
 장치와 동작은 소문자 그대로 써야 합니다. `none` 행은 장치 `-`, 동작 `none`, 세기 `-`를 써야 합니다. `none`이 아닌 행은 장치 중 하나와 숫자 세기를 지정합니다.
 
-## 라벨을 정하는 법
+# (중요!) 라벨을 정하는 법
 
 라벨은 모델이 예측한 값을 복사하는 게 아니라, 문장을 올바르게 이해했을 때 의도한 정답으로 작성합니다. 출력의 `OK`, `HOLD`, confidence는 학습 라벨이 아닙니다.
 
@@ -54,10 +57,10 @@ the fan was noisy this morning<TAB>-<TAB>none<TAB>-
 아래 블록은 필드 사이에 실제 탭 문자가 들어 있어 파일에 붙여넣을 수 있습니다.
 
 ```text
-make the desk lamp a little dimmer	led	change	2
-switch the motor off	motor	off	0
-should we start the desk fan	-	none	-
-the fan was noisy this morning	-	none	-
+make the desk lamp a little dimmer led change 2
+switch the motor off motor off 0
+should we start the desk fan - none -
+the fan was noisy this morning - none -
 ```
 
 ## 어떤 오답을 추가할까

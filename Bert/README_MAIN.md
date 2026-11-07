@@ -12,11 +12,11 @@ WSL project (Python .venv, base weights, pruned, GPU training)
 Windows project (학습 결과 검토 및 Git 작업)
 ```
 
-두 명령은 각각 저장소 파일을 한 방향으로 복사합니다. 같은 경로의 파일은 덮어쓰지만, 대상 쪽에만 있는 파일을 삭제하지는 않습니다. `.git`, WSL 전용 `Bert/.venv`, Pico 빌드 결과만 복사에서 제외하고, `Bert/pruned/`와 원본 모델 가중치를 포함한 나머지 파일은 복사합니다. Git 작업은 Windows 저장소에서 합니다.
+두 명령은 각각 저장소 파일을 한 방향으로 복사합니다. 같은 경로의 파일은 덮어쓰지만, 대상 쪽에만 있는 파일을 삭제하지는 않습니다. `.git`, WSL 전용 `Bert/.venv`, Pico 빌드 결과만 복사에서 제외하고, `Bert/pruned/`와 원본 모델 가중치를 포함한 나머지 파일은 복사합니다. Git에서는 `.gitignore`에 따라 `Bert/pruned/*.pt` 체크포인트만 제외하고 학습 로그·오답 TSV·설정·어휘는 공유합니다. Git 작업은 Windows 저장소에서 합니다.
 
 ## 개발·학습 절차 (최대 5단계)
 
-최초 PyTorch/CUDA 설치, 원본 모델 파일 준비, 가상환경 설정은 별도 문서인 [`WSL_SETUP.md`](WSL_SETUP.md)에 있습니다. 아래 학습 절차는 그 환경이 이미 준비됐다고 가정합니다. 모든 학습 명령은 **Arch WSL 터미널**에서 실행합니다.
+최초 PyTorch/CUDA 설치, 원본 모델 파일 준비, 가상환경 설정은 별도 문서인 [`README_WSL_SETUP.md`](README_WSL_SETUP.md)에 있습니다. 아래 학습 절차는 그 환경이 이미 준비됐다고 가정합니다. 모든 학습 명령은 **Arch WSL 터미널**에서 실행합니다.
 
 1. **Arch WSL을 열고 매번 학습 전에 Windows 저장소를 WSL로 동기화한 뒤 가상환경에 들어갑니다.**
 
@@ -53,7 +53,7 @@ Windows project (학습 결과 검토 및 Git 작업)
    bash "$WIN_PROJECT/Bert/sync_from_wsl.sh"
    ```
 
-3. **보강 학습 전에 TSV를 편집합니다.** Windows 프로젝트의 `Bert/hard_examples.tsv`를 열어 새 예시를 입력하고 저장합니다. 편집 위치, 탭 입력 방법, 라벨 기준, 작성 예시는 별도 문서 [`HARD_EXAMPLES_GUIDE.md`](HARD_EXAMPLES_GUIDE.md)에 있습니다.
+3. **보강 학습 전에 TSV를 편집합니다.** Windows 프로젝트의 `Bert/hard_examples.tsv`를 열어 새 예시를 입력하고 저장합니다. 편집 위치, 탭 입력 방법, 라벨 기준, 작성 예시는 별도 문서 [`README_HARD_EXAMPLES_GUIDE.md`](README_HARD_EXAMPLES_GUIDE.md)에 있습니다.
 
 4. **WSL에서 자동 보강 회차를 실행하고 Windows에서 결과를 확인합니다.** 이 스크립트가 Windows 저장소를 WSL에 동기화하고, 보강 학습·비교·채택/보류 후 WSL 저장소를 Windows에 동기화합니다.
 
@@ -90,8 +90,6 @@ WSL에서 코드를 수정한 경우도 `sync_from_wsl.sh`가 Windows 쪽 같은
 
 ### epoch 로그 읽는 법
 
-예전에 안내에 나온 `loss 0.8`, `test acc 90.0%`, `처음 보는 문장 acc 65.0%`는 실제 실행에서 가져온 값이 아니라 임의로 든 예시 숫자였습니다. 실제 결과처럼 보이게 쓴 잘못된 설명이므로, 해당 숫자는 기준값으로 사용하지 마세요. 실행할 때마다 실제 값은 달라집니다.
-
 이 한 줄은 [`medium_train_v2.py`](medium_train_v2.py)의 `train()` 함수가 각 epoch 끝에서 출력합니다. 계산 기준은 다음과 같습니다.
 
 | 출력 | 실제 의미 |
@@ -107,4 +105,4 @@ WSL에서 코드를 수정한 경우도 `sync_from_wsl.sh`가 Windows 쪽 같은
 
 ## TSV 편집
 
-`hard_examples.tsv`의 입력 규칙은 [`HARD_EXAMPLES_GUIDE.md`](HARD_EXAMPLES_GUIDE.md)를 참고하세요. 학습 예문을 `vocab.txt`에 추가하지 않습니다. 학습 코드가 학습 문장에 필요한 토큰을 어휘에 반영합니다.
+`hard_examples.tsv`의 입력 규칙은 [`README_HARD_EXAMPLES_GUIDE.md`](README_HARD_EXAMPLES_GUIDE.md)를 참고하세요. 학습 예문을 `vocab.txt`에 추가하지 않습니다. 학습 코드가 학습 문장에 필요한 토큰을 어휘에 반영합니다.
