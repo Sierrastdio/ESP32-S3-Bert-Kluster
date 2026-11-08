@@ -17,7 +17,7 @@ import struct
 import torch
 
 # ── 헤더 및 모델 상수 ────────────────────────────────────────────────────────
-MAGIC = 0x42455254       # 'BERT' (little-endian)
+MAGIC = 0x42455254  # 'BERT' (little-endian)
 FILE_VERSION = 1
 HEADER_SIZE = 64
 DIRENTRY_SIZE = 64
@@ -37,15 +37,20 @@ NODE_LAYER_RANGES = {1: (0, 1), 2: (2, 3), 3: (4, 5), 4: (6, 7)}
 
 # ── 텐서 명세 목록 생성 ──────────────────────────────────────────────────────
 
+
 def emb_specs():
     """임베딩 레이어 텐서 명세 (노드 1)"""
     p = "base.embeddings"
     return [
         ("emb.word.w", f"{p}.word_embeddings.weight", True),
-        ("emb.pos.w",  f"{p}.position_embeddings.weight", True),
-        ("emb.type.w", f"{p}.token_type_embeddings.weight", False),  # 2행뿐이라 FP32 유지
-        ("emb.ln.w",   f"{p}.LayerNorm.weight", False),
-        ("emb.ln.b",   f"{p}.LayerNorm.bias", False),
+        ("emb.pos.w", f"{p}.position_embeddings.weight", True),
+        (
+            "emb.type.w",
+            f"{p}.token_type_embeddings.weight",
+            False,
+        ),  # 2행뿐이라 FP32 유지
+        ("emb.ln.w", f"{p}.LayerNorm.weight", False),
+        ("emb.ln.b", f"{p}.LayerNorm.bias", False),
     ]
 
 
@@ -93,8 +98,20 @@ def head_specs():
 
 # ── 바이너리 패킹 ────────────────────────────────────────────────────────────
 
-def pack_header(node_id, layer_start, layer_end, flags, n_tensors,
-                dev_cls, act_cls, amt_cls, vocab_size, max_pos, wt_dtype):
+
+def pack_header(
+    node_id,
+    layer_start,
+    layer_end,
+    flags,
+    n_tensors,
+    dev_cls,
+    act_cls,
+    amt_cls,
+    vocab_size,
+    max_pos,
+    wt_dtype,
+):
     """
     64바이트 파일 헤더 생성.
     ESP32 bert_weight_header_t 구조체와 1:1로 일치합니다.
@@ -139,10 +156,11 @@ def tensor_to_bytes(t, dtype):
 
 # ── 노드별 바이너리 생성 ─────────────────────────────────────────────────────
 
+
 def build_node_bin(sd, node_id, wt_dtype, out_dir):
     layer_start, layer_end = NODE_LAYER_RANGES[node_id]
-    has_emb = (node_id == 1)
-    has_head = (node_id == 4)
+    has_emb = node_id == 1
+    has_head = node_id == 4
 
     # 1. 해당 노드가 맡은 텐서 목록 취합
     specs = []
@@ -179,8 +197,17 @@ def build_node_bin(sd, node_id, wt_dtype, out_dir):
     with open(out_path, "wb") as f:
         # [1구역] 64B 파일 헤더
         hdr = pack_header(
-            node_id, layer_start, layer_end, flags, n_tensors,
-            dev_cls, act_cls, amt_cls, vocab_size, max_pos, wt_dtype
+            node_id,
+            layer_start,
+            layer_end,
+            flags,
+            n_tensors,
+            dev_cls,
+            act_cls,
+            amt_cls,
+            vocab_size,
+            max_pos,
+            wt_dtype,
         )
         f.write(hdr)
 
@@ -206,18 +233,29 @@ def build_node_bin(sd, node_id, wt_dtype, out_dir):
         extra.append("head")
     extra_str = f" +{'/'.join(extra)}" if extra else ""
 
-    print(f"  node{node_id}.bin  {size_mb:.2f} MB  ({n_tensors} tensors, L{layer_start}-{layer_end}{extra_str})")
+    print(
+        f"  node{node_id}.bin  {size_mb:.2f} MB  ({n_tensors} tensors, L{layer_start}-{layer_end}{extra_str})"
+    )
     return out_path
 
 
 # ── 메인 ─────────────────────────────────────────────────────────────────────
 
+
 def main():
-    parser = argparse.ArgumentParser(description="BERT .pt → node1.bin ~ node4.bin 변환")
-    parser.add_argument("--pt", default="pruned/model_finetuned.pt", help=".pt 파일 경로")
+    parser = argparse.ArgumentParser(
+        description="BERT .pt → node1.bin ~ node4.bin 변환"
+    )
+    parser.add_argument(
+        "--pt", default="pruned/model_finetuned.pt", help=".pt 파일 경로"
+    )
     parser.add_argument("--out", default="weights", help="출력 디렉토리")
-    parser.add_argument("--dtype", choices=["fp16", "fp32"], default="fp16",
-                        help="가중치 정밀도 (bias/LayerNorm은 항상 FP32 유지)")
+    parser.add_argument(
+        "--dtype",
+        choices=["fp16", "fp32"],
+        default="fp16",
+        help="가중치 정밀도 (bias/LayerNorm은 항상 FP32 유지)",
+    )
     args = parser.parse_args()
 
     wt_dtype = DTYPE_FP16 if args.dtype == "fp16" else DTYPE_FP32
@@ -235,7 +273,9 @@ def main():
     for node_id in (1, 2, 3, 4):
         build_node_bin(sd, node_id, wt_dtype, args.out)
 
-    print("\n완료. esptool.py를 사용해 각 node_N.bin을 ESP32-S3 데이터 파티션에 플래시하세요.")
+    print(
+        "\n완료. esptool.py를 사용해 각 node_N.bin을 ESP32-S3 데이터 파티션에 플래시하세요."
+    )
 
 
 if __name__ == "__main__":
