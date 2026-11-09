@@ -20,6 +20,7 @@ build.ninja
 *.map
 *.dis
 *.lst
+__pycache__/
 
 # Share training logs, evaluation reports, and metadata; model checkpoints are shared separately.
 Bert/pruned/*.pt

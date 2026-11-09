@@ -93,7 +93,26 @@ static bool wait_level(int gpio, int level, uint32_t timeout_ms) {
 // ── 노드 역할 자동 감지 (플래시 가중치 파티션) ───────────────────────────────
 static void detect_node_role(void) {
 	const esp_partition_t *part =
-	    esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, NULL);
+	    esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, "model");
+
+	if (!part) {
+		// "model" 레이블이 없는 경우 모든 DATA 파티션을 순회하여 BERT 매직(0x42455254) 탐색
+		esp_partition_iterator_t it =
+		    esp_partition_find(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_ANY, NULL);
+		while (it != NULL) {
+			const esp_partition_t *p = esp_partition_get(it);
+			uint32_t magic = 0;
+			if (esp_partition_read(p, 0, &magic, sizeof(magic)) == ESP_OK && magic == 0x42455254) {
+				part = p;
+				break;
+			}
+			it = esp_partition_next(it);
+		}
+		if (it != NULL) {
+			esp_partition_iterator_release(it);
+		}
+	}
+
 	bert_weight_header_t hdr;
 
 	if (part && esp_partition_read(part, 0, &hdr, sizeof(hdr)) == ESP_OK &&
@@ -103,8 +122,8 @@ static void detect_node_role(void) {
 		g_has_head = (hdr.flags & 2) != 0;
 		g_layer_start = hdr.layer_start;
 		g_layer_end = hdr.layer_end;
-		ESP_LOGI(TAG, "Weight binary loaded: Node %u (Layers %u-%u, emb=%d, head=%d)", g_node_id,
-		         g_layer_start, g_layer_end, g_has_emb, g_has_head);
+		ESP_LOGI(TAG, "Weight binary loaded from [%s]: Node %u (Layers %u-%u, emb=%d, head=%d)",
+		         part->label, g_node_id, g_layer_start, g_layer_end, g_has_emb, g_has_head);
 	} else {
 		// 가중치 미플래싱 시 기본값 (노드 1)
 		g_node_id = 1;

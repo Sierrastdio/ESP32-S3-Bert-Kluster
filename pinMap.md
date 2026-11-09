@@ -1,4 +1,4 @@
-GPxx, GPIOxx == Dxx 
+GPxx, GPIOxx == Dxx
 
 ---
 
@@ -19,6 +19,7 @@ D-       D9      -> USB-A-D-
 남는 SPI 포트는 3.5 TFT LCD 제어하는데 사용.(구현 제일 후순위)
 
 ```
+
 ---
 
 # ESP1
@@ -30,6 +31,7 @@ CS1     D6      -> D10(ESP 2)
 RDY1    D15     <- D16(ESP 2)
 
 ```
+
 ---
 
 # ESP2
@@ -41,6 +43,7 @@ CS2     D6      -> D10(ESP 3)
 RDY2    D15     <- D16(ESP 3)
 
 ```
+
 ---
 
 # ESP3
@@ -52,6 +55,7 @@ CS3     D6      -> D10(ESP 4)
 RDY3    D15     <- D16(ESP 4)
 
 ```
+
 # ESP4
 
 ```
