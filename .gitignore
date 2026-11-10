@@ -22,6 +22,12 @@ build.ninja
 *.lst
 __pycache__/
 
+!node1.bin
+!node2.bin
+!node3.bin
+!node4.bin
+
+
 # Share training logs, evaluation reports, and metadata; model checkpoints are shared separately.
 Bert/pruned/*.pt
 
