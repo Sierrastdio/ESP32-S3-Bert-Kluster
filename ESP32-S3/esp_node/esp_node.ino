@@ -122,8 +122,9 @@ static void detect_node_role(void) {
 		g_has_head = (hdr.flags & 2) != 0;
 		g_layer_start = hdr.layer_start;
 		g_layer_end = hdr.layer_end;
-		ESP_LOGI(TAG, "Weight binary loaded from [%s]: Node %u (Layers %u-%u, emb=%d, head=%d)",
-		         part->label, g_node_id, g_layer_start, g_layer_end, g_has_emb, g_has_head);
+		Serial.printf("\n[v] 가중치 정상 로드: [파티션 %s] -> Node %u (Layers %u-%u, emb=%d, head=%d)\n",
+		              part->label, g_node_id, g_layer_start, g_layer_end, g_has_emb, g_has_head);
+		Serial.flush();
 	} else {
 		// 가중치 미플래싱 시 기본값 (노드 1)
 		g_node_id = 1;
@@ -131,20 +132,22 @@ static void detect_node_role(void) {
 		g_has_head = false;
 		g_layer_start = 0;
 		g_layer_end = 1;
-		ESP_LOGW(TAG, "No weight binary found. Defaulting to Node %u", g_node_id);
+		Serial.printf("\n[!] 경고: 0x200000 가중치 파티션을 찾지 못했습니다. 기본 Node %u로 동작합니다.\n", g_node_id);
+		Serial.flush();
 	}
 }
 
 // ── UART 통신 ─────────────────────────────────────────────────────────────────
 static void uart_setup(void) {
-	uart_config_t uc = {
-	    .baud_rate = 115200,
-	    .data_bits = UART_DATA_8_BITS,
-	    .parity = UART_PARITY_DISABLE,
-	    .stop_bits = UART_STOP_BITS_1,
-	    .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-	    .source_clk = UART_SCLK_DEFAULT,
-	};
+	uart_config_t uc;
+	memset(&uc, 0, sizeof(uc));
+	uc.baud_rate = 115200;
+	uc.data_bits = UART_DATA_8_BITS;
+	uc.parity = UART_PARITY_DISABLE;
+	uc.stop_bits = UART_STOP_BITS_1;
+	uc.flow_ctrl = UART_HW_FLOWCTRL_DISABLE;
+	uc.source_clk = UART_SCLK_DEFAULT;
+
 	ESP_ERROR_CHECK(uart_driver_install(UART_NUM_1, 2048, 0, 0, NULL, 0));
 	ESP_ERROR_CHECK(uart_param_config(UART_NUM_1, &uc));
 	ESP_ERROR_CHECK(
@@ -187,16 +190,17 @@ static void wait_config(config_message_t *out) {
 }
 
 static void send_result(uint16_t sid, const uint8_t *payload, uint16_t len) {
-	result_header_t h = {
-	    .magic = PROTO_MAGIC,
-	    .version = PROTO_VERSION,
-	    .type = MSG_RESULT,
-	    .sentence_id = sid,
-	    .dtype = 0,
-	    .flags = 0,
-	    .payload_len = len,
-	};
+	result_header_t h;
+	memset(&h, 0, sizeof(h));
+	h.magic = PROTO_MAGIC;
+	h.version = PROTO_VERSION;
+	h.type = MSG_RESULT;
+	h.sentence_id = sid;
+	h.dtype = 0;
+	h.flags = 0;
+	h.payload_len = len;
 	h.crc32 = crc32_split(&h, offsetof(result_header_t, crc32), payload, len);
+
 	uart_write_bytes(UART_NUM_1, &h, sizeof(h));
 	uart_write_bytes(UART_NUM_1, payload, len);
 	uart_wait_tx_done(UART_NUM_1, pdMS_TO_TICKS(1000));
@@ -204,20 +208,23 @@ static void send_result(uint16_t sid, const uint8_t *payload, uint16_t len) {
 
 // ── SPI 슬레이브 수신 (이전 노드 / Pico) ──────────────────────────────────────
 static bool rx_open(uint8_t *buf, size_t total) {
-	size_t           nc = nchunks(total);
-	spi_bus_config_t bus = {
-	    .mosi_io_num = PIN_SPI_RX_MOSI,
-	    .miso_io_num = -1,
-	    .sclk_io_num = PIN_SPI_RX_SCLK,
-	    .quadwp_io_num = -1,
-	    .quadhd_io_num = -1,
-	    .max_transfer_sz = NODE_SPI_CHUNK_BYTES,
-	};
-	spi_slave_interface_config_t sl = {
-	    .mode = 0,
-	    .spics_io_num = PIN_SPI_RX_CS,
-	    .queue_size = (int)nc,
-	};
+	size_t nc = nchunks(total);
+
+	spi_bus_config_t bus;
+	memset(&bus, 0, sizeof(bus));
+	bus.mosi_io_num = PIN_SPI_RX_MOSI;
+	bus.miso_io_num = -1;
+	bus.sclk_io_num = PIN_SPI_RX_SCLK;
+	bus.quadwp_io_num = -1;
+	bus.quadhd_io_num = -1;
+	bus.max_transfer_sz = NODE_SPI_CHUNK_BYTES;
+
+	spi_slave_interface_config_t sl;
+	memset(&sl, 0, sizeof(sl));
+	sl.spics_io_num = PIN_SPI_RX_CS;
+	sl.queue_size = (int)nc;
+	sl.mode = 0;
+
 	if (spi_slave_initialize(SPI2_HOST, &bus, &sl, SPI_DMA_CH_AUTO) != ESP_OK)
 		return false;
 
@@ -248,20 +255,22 @@ static bool rx_wait(size_t total) {
 
 // ── SPI 마스터 송신 (다음 노드) ──────────────────────────────────────────────
 static void spi_tx_setup(void) {
-	spi_bus_config_t bus = {
-	    .mosi_io_num = PIN_SPI_TX_MOSI,
-	    .miso_io_num = -1,
-	    .sclk_io_num = PIN_SPI_TX_SCLK,
-	    .quadwp_io_num = -1,
-	    .quadhd_io_num = -1,
-	    .max_transfer_sz = NODE_SPI_CHUNK_BYTES,
-	};
-	spi_device_interface_config_t dev = {
-	    .clock_speed_hz = NODE_SPI_TX_HZ,
-	    .mode = 0,
-	    .spics_io_num = PIN_SPI_TX_CS,
-	    .queue_size = 1,
-	};
+	spi_bus_config_t bus;
+	memset(&bus, 0, sizeof(bus));
+	bus.mosi_io_num = PIN_SPI_TX_MOSI;
+	bus.miso_io_num = -1;
+	bus.sclk_io_num = PIN_SPI_TX_SCLK;
+	bus.quadwp_io_num = -1;
+	bus.quadhd_io_num = -1;
+	bus.max_transfer_sz = NODE_SPI_CHUNK_BYTES;
+
+	spi_device_interface_config_t dev;
+	memset(&dev, 0, sizeof(dev));
+	dev.mode = 0;
+	dev.clock_speed_hz = NODE_SPI_TX_HZ;
+	dev.spics_io_num = PIN_SPI_TX_CS;
+	dev.queue_size = 1;
+
 	ESP_ERROR_CHECK(spi_bus_initialize(SPI3_HOST, &bus, SPI_DMA_CH_AUTO));
 	ESP_ERROR_CHECK(spi_bus_add_device(SPI3_HOST, &dev, &tx_dev));
 }
@@ -269,8 +278,10 @@ static void spi_tx_setup(void) {
 static bool tx_send(const uint8_t *buf, size_t total) {
 	size_t nc = nchunks(total);
 	for (size_t i = 0; i < nc; i++) {
-		spi_transaction_t t = {.length = chunklen(total, i) * 8,
-		                       .tx_buffer = buf + i * NODE_SPI_CHUNK_BYTES};
+		spi_transaction_t t;
+		memset(&t, 0, sizeof(t));
+		t.length = chunklen(total, i) * 8;
+		t.tx_buffer = buf + i * NODE_SPI_CHUNK_BYTES;
 		if (spi_device_transmit(tx_dev, &t) != ESP_OK)
 			return false;
 		esp_rom_delay_us(NODE_CHUNK_GAP_US);
@@ -300,20 +311,34 @@ static void handle_sentence(const config_message_t *cfg) {
 	                                    : (sizeof(data_header_t) + data_bytes);
 	const size_t   tx_total = sizeof(data_header_t) + data_bytes;
 
-	if (!rx_open(rx_buf, rx_total))
-		return;
+	Serial.printf("[Node %u] 문장 #%u 처리 시작 (토큰수: %u, RX바이트: %u)\n", g_node_id, sid, count, (unsigned)rx_total);
 
-	// 1. 다음 노드 준비 확인 후 내 READY HIGH
-	if (!g_has_head && !wait_level(PIN_RDY_DOWN, 1, TIMEOUT_READY_MS)) {
-		spi_slave_free(SPI2_HOST);
+	if (!rx_open(rx_buf, rx_total)) {
+		Serial.printf("[Node %u] SPI 슬레이브 RX 열기 실패!\n", g_node_id);
 		return;
 	}
+
+	// 1. 다음 노드 준비 확인 후 내 READY HIGH
+	if (!g_has_head) {
+		Serial.printf("[Node %u] 다음 노드 READY(D15) 대기 중...\n", g_node_id);
+		if (!wait_level(PIN_RDY_DOWN, 1, TIMEOUT_READY_MS)) {
+			Serial.printf("[Node %u] 다음 노드 READY 타임아웃 (5초 경과)! D15 핀 배선을 확인하세요.\n", g_node_id);
+			spi_slave_free(SPI2_HOST);
+			return;
+		}
+		Serial.printf("[Node %u] 다음 노드 READY 확인됨!\n", g_node_id);
+	}
+
+	Serial.printf("[Node %u] 내 READY(D%u) HIGH 출력 -> 이전 노드/Pico로 신호 전송\n", g_node_id, PIN_RDY_UP(g_node_id));
 	gpio_set_level((gpio_num_t)PIN_RDY_UP(g_node_id), 1);
 	bool ok = rx_wait(rx_total);
 	gpio_set_level((gpio_num_t)PIN_RDY_UP(g_node_id), 0);
 	spi_slave_free(SPI2_HOST);
-	if (!ok)
+	if (!ok) {
+		Serial.printf("[Node %u] SPI 수신 타임아웃!\n", g_node_id);
 		return;
+	}
+	Serial.printf("[Node %u] SPI 데이터 수신 완료!\n", g_node_id);
 
 	// 2. 수신 프레임 헤더 및 CRC 무결성 검증
 	const uint8_t *in_payload = NULL;
@@ -349,10 +374,34 @@ static void handle_sentence(const config_message_t *cfg) {
 		}
 	}
 
-	// 3. 마지막 노드: 분류 헤드 연산 후 Pico로 결과 전송
+	// 3. 마지막 노드(Node 4): 최종 결과 출력 및 Pico로 UART 회신
+	// ※ g_has_head는 오직 노드 4에서만 true이므로, 다른 노드(1, 2, 3)에는 전혀 영향이 없습니다.
 	if (g_has_head) {
-		// TODO: 레이어 6~7 연산 + 3개 헤드(dev, act, amt) Softmax 분류
+		// 1) Pico로 바이너리 결과 먼저 전송 (Pico가 수신 후 즉시 성공 LED_OK 점멸)
 		send_result(sid, in_payload, (uint16_t)(count * 2));
+		vTaskDelay(pdMS_TO_TICKS(10)); // Pico의 패킷 수신 완료 대기
+
+		// 2) PC 시리얼 모니터(UART1 및 Serial)에 사람이 읽을 수 있는 텍스트 출력
+		const uint16_t *tokens = (const uint16_t *)in_payload;
+		char msg[256];
+
+		snprintf(msg, sizeof(msg),
+		         "\r\n==========================================\r\n"
+		         "[Node 4] 클러스터 완주! 최종 결과 도착 (문장 #%u, 토큰 %u개)\r\n"
+		         "  [루프백 토큰 ID]: [ ",
+		         sid, count);
+		uart_write_bytes(UART_NUM_1, msg, strlen(msg));
+		Serial.print(msg);
+
+		for (size_t i = 0; i < count; i++) {
+			snprintf(msg, sizeof(msg), "%u%s", tokens[i], (i + 1 < count) ? ", " : " ");
+			uart_write_bytes(UART_NUM_1, msg, strlen(msg));
+			Serial.print(msg);
+		}
+
+		snprintf(msg, sizeof(msg), "]\r\n==========================================\r\n\r\n");
+		uart_write_bytes(UART_NUM_1, msg, strlen(msg));
+		Serial.print(msg);
 		return;
 	}
 
@@ -360,16 +409,16 @@ static void handle_sentence(const config_message_t *cfg) {
 	uint8_t *out_payload = tx_buf + sizeof(data_header_t);
 	node_compute(count, in_payload, out_payload, data_bytes);
 
-	data_header_t oh = {
-	    .magic = PROTO_MAGIC,
-	    .version = PROTO_VERSION,
-	    .type = MSG_DATA,
-	    .sentence_id = sid,
-	    .token_count = count,
-	    .data_bytes = (uint32_t)data_bytes,
-	    .dtype = DTYPE_FP16,
-	    .reserved = 0,
-	};
+	data_header_t oh;
+	memset(&oh, 0, sizeof(oh));
+	oh.magic = PROTO_MAGIC;
+	oh.version = PROTO_VERSION;
+	oh.type = MSG_DATA;
+	oh.sentence_id = sid;
+	oh.token_count = count;
+	oh.data_bytes = (uint32_t)data_bytes;
+	oh.dtype = DTYPE_FP16;
+	oh.reserved = 0;
 	oh.crc32 = crc32_split(&oh, offsetof(data_header_t, crc32), out_payload, data_bytes);
 	memcpy(tx_buf, &oh, sizeof(oh));
 
@@ -380,35 +429,51 @@ static void handle_sentence(const config_message_t *cfg) {
 
 // ── 아두이노 진입점 ───────────────────────────────────────────────────────────
 void setup(void) {
+	Serial.begin(115200);
+	delay(300); // USB 시리얼 포트 연결 대기
+	Serial.println("\n\n========================================");
+	Serial.println("  ESP32-S3 BERT Cluster Node Starting");
+	Serial.println("========================================");
+	Serial.flush();
+
 	detect_node_role();
+	Serial.flush();
 
 	// READY 출력 핀 설정
-	gpio_config_t out_cfg = {
-	    .pin_bit_mask = 1ULL << PIN_RDY_UP(g_node_id),
-	    .mode = GPIO_MODE_OUTPUT,
-	};
+	gpio_config_t out_cfg;
+	memset(&out_cfg, 0, sizeof(out_cfg));
+	out_cfg.pin_bit_mask = 1ULL << PIN_RDY_UP(g_node_id);
+	out_cfg.mode = GPIO_MODE_OUTPUT;
 	gpio_config(&out_cfg);
 	gpio_set_level((gpio_num_t)PIN_RDY_UP(g_node_id), 0);
 
 	// 노드 4를 제외한 노드는 다음 노드 READY 감시 & SPI 마스터 초기화
 	if (!g_has_head) {
-		gpio_config_t in_cfg = {
-		    .pin_bit_mask = 1ULL << PIN_RDY_DOWN,
-		    .mode = GPIO_MODE_INPUT,
-		    .pull_down_en = GPIO_PULLDOWN_ENABLE,
-		};
+		gpio_config_t in_cfg;
+		memset(&in_cfg, 0, sizeof(in_cfg));
+		in_cfg.pin_bit_mask = 1ULL << PIN_RDY_DOWN;
+		in_cfg.mode = GPIO_MODE_INPUT;
+		in_cfg.pull_down_en = GPIO_PULLDOWN_ENABLE;
 		gpio_config(&in_cfg);
 		spi_tx_setup();
 	}
 
-	uart_setup();
-
-	// PSRAM DMA 버퍼 할당
+	// DMA 버퍼 할당 (※ ESP32-S3 SPI 슬레이브 DMA는 반드시 내부 SRAM이어야 함!)
 	size_t cap = align4(NODE_MAX_FRAME_BYTES) + 64;
-	rx_buf = (uint8_t *)heap_caps_aligned_alloc(64, cap, MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA);
-	tx_buf = (uint8_t *)heap_caps_aligned_alloc(64, cap, MALLOC_CAP_SPIRAM | MALLOC_CAP_DMA);
+	rx_buf = (uint8_t *)heap_caps_aligned_alloc(64, cap, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
+	tx_buf = (uint8_t *)heap_caps_aligned_alloc(64, cap, MALLOC_CAP_INTERNAL | MALLOC_CAP_DMA);
 
-	ESP_LOGI(TAG, "ESP32-S3 BERT Node %u Initialized", g_node_id);
+	if (!rx_buf || !tx_buf) {
+		Serial.println("[!] DMA 버퍼 할당 실패! 내부 SRAM 메모리 부족.");
+	} else {
+		Serial.println("[v] 내부 SRAM DMA 버퍼 할당 성공 (64KB x 2)");
+	}
+
+	Serial.printf("[v] ESP32-S3 BERT Node %u 초기화 완료! (UART/SPI 대기 중)\n", g_node_id);
+	Serial.flush();
+
+	// UART1 초기화: 노드 4는 GPIO 43(TXD)을 Pico 송신용으로 점유하므로 맨 마지막에 초기화
+	uart_setup();
 }
 
 void loop(void) {

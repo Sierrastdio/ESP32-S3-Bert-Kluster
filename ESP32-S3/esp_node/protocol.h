@@ -16,16 +16,16 @@
 
 typedef struct __attribute__((packed)) {
 	uint32_t magic;
-	uint8_t  version, type;
+	uint8_t version, type;
 	uint16_t sentence_id, token_count;
 	uint32_t data_packet_bytes; // token_count * HIDDEN * 2
-	uint8_t  dtype, reserved;
+	uint8_t dtype, reserved;
 	uint32_t crc32;
 } config_message_t; // 20 bytes
 
 typedef struct __attribute__((packed)) {
 	uint32_t magic;
-	uint8_t  version, type;
+	uint8_t version, type;
 	uint16_t sentence_id, token_count;
 	uint32_t crc32;
 	// uint16_t token_ids[token_count] follows
@@ -33,19 +33,19 @@ typedef struct __attribute__((packed)) {
 
 typedef struct __attribute__((packed)) {
 	uint32_t magic;
-	uint8_t  version, type;
+	uint8_t version, type;
 	uint16_t sentence_id, token_count;
 	uint32_t data_bytes; // payload 바이트 수
-	uint8_t  dtype, reserved;
+	uint8_t dtype, reserved;
 	uint32_t crc32;
 	// uint8_t payload[data_bytes] follows
 } data_header_t; // 20 bytes
 
 typedef struct __attribute__((packed)) {
 	uint32_t magic;
-	uint8_t  version, type;
+	uint8_t version, type;
 	uint16_t sentence_id;
-	uint8_t  dtype, flags;
+	uint8_t dtype, flags;
 	uint16_t payload_len;
 	uint32_t crc32;
 	// uint8_t payload[payload_len] follows
