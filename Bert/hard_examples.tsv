@@ -32,3 +32,20 @@ set the fan speed to half	fan	change	4
 run the engine at low speed	motor	on	2
 keep the lamp at medium	led	change	4
 the motor is shaking	motor	change	4
+# 애매한 상황 표현 (규칙: 잘 거야/아무도 없어 -> 조명 끄기, 너무 시끄러움 -> 끄기)
+i feel like i am melting	fan	on	6
+it is stuffy and hot in this room	fan	on	6
+i could use a little breeze	fan	on	4
+i am getting goosebumps	fan	off	0
+it is chilly near the fan	fan	off	0
+the breeze is too strong for me	fan	change	2
+i can barely feel any air	fan	change	6
+i can not read the labels in this dark room	led	on	7
+it is too dim to read	led	change	6
+the glare is too strong	led	change	2
+the light is way too harsh	led	change	2
+i am about to fall asleep	led	off	0
+everyone has left the room	led	off	0
+the motor is rattling loudly	motor	off	0
+the motor is barely turning	motor	change	6
+smoke is coming out of the motor	motor	off	0

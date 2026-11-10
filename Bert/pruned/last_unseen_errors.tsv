@@ -1,25 +1,60 @@
 group	sentence	expected	predicted
-직접 명령	can i get some light in here	led/on/7	led/change/7
-직접 명령	tone down the lamp	led/change/2	led/off/2
-직접 명령	bump the light up a notch	led/change/5	led/on/6
 직접 명령	spin up the rotor	motor/on/7	fan/on/7
 직접 명령	run the motor at quarter speed	motor/on/2	motor/on/7
+직접 명령	kick on the ventilator	fan/on/7	led/on/7
 직접 명령	i want the fan running at medium	fan/on/4	fan/change/4
 직접 명령	enough with the fan	fan/off/0	fan/change/7
-애매한 표현	it is sweltering in here	fan/on/6	none
+직접 명령	ventilator to level 5	fan/change/5	led/change/5
+직접 명령	bring the rotor to a stop	motor/off/0	led/change/0
+직접 명령	switch the ventilator to high	fan/change/6	led/change/6
+직접 명령	get the fan blowing gently	fan/on/2	fan/on/6
+직접 명령	crank up the blower	fan/change/6	fan/on/6
+직접 명령	give me some light over here	led/on/7	led/change/7
+애매한 표현	it is sweltering in here	fan/on/6	fan/on/2
 애매한 표현	this heat is unbearable	fan/on/6	none
-애매한 표현	i am dripping with sweat	fan/on/6	none
 애매한 표현	the air is heavy	fan/on/4	none
-애매한 표현	i need a sweater	fan/off/0	none
+애매한 표현	i need a sweater	fan/off/0	fan/on/7
 애매한 표현	the fan is blowing my papers away	fan/change/2	fan/off/0
-애매한 표현	the room is gloomy	led/on/7	none
-애매한 표현	the lights are blinding	led/change/2	none
-애매한 표현	my eyes hurt	led/change/2	fan/change/0
+애매한 표현	too much wind	fan/change/2	fan/off/0
+애매한 표현	my eyes hurt	led/change/2	fan/change/6
 애매한 표현	good night	led/off/0	none
-애매한 표현	the motor is making a racket	motor/change/2	none
-애매한 표현	the engine is screaming	motor/change/2	none
-애매한 표현	the motor is crawling	motor/change/6	none
+애매한 표현	the motor is making a racket	motor/off/0	motor/change/6
+애매한 표현	the engine is screaming	motor/off/0	motor/change/7
 애매한 표현	the motor smells hot	motor/off/0	motor/on/0
-애매한 표현	something is wrong with the engine	motor/off/0	none
+애매한 표현	something is wrong with the engine	motor/off/0	motor/on/7
+애매한 표현	the heat is making me dizzy	fan/on/6	none
+애매한 표현	some fresh air would be nice	fan/on/4	none
+애매한 표현	i am a little hot	fan/on/4	fan/on/6
+애매한 표현	the room is icy	fan/off/0	none
+애매한 표현	i caught a chill	fan/off/0	fan/on/6
+애매한 표현	the wind is messing up my hair	fan/change/2	fan/change/6
+애매한 표현	my papers keep flying off the desk	fan/change/2	fan/off/0
+애매한 표현	the air is blasting at me	fan/change/2	fan/on/7
+애매한 표현	the fan is barely doing anything	fan/change/6	fan/change/1
+애매한 표현	i need more airflow	fan/change/6	fan/on/7
+애매한 표현	i can not see my book	led/on/7	none
+애매한 표현	everything is black in here	led/on/7	led/off/7
+애매한 표현	i need to see what i am doing	led/on/7	none
+애매한 표현	i am straining my eyes to read	led/change/6	led/off/7
+애매한 표현	the brightness is giving me a headache	led/change/2	led/change/6
+애매한 표현	i am going to take a nap	led/off/0	led/on/4
+애매한 표현	bedtime	led/off/0	fan/on/6
+애매한 표현	the room is empty now	led/off/0	led/on/4
+애매한 표현	the motor noise is driving me crazy	motor/off/0	motor/change/2
+애매한 표현	the motor is burning up	motor/off/0	motor/on/6
+애매한 표현	the motor is sparking	motor/off/0	motor/on/7
+애매한 표현	the motor is going crazy fast	motor/change/2	motor/on/6
+애매한 표현	the engine is racing	motor/change/2	motor/change/7
+애매한 표현	the engine has no power	motor/change/6	motor/off/0
 명령 아님	i will be back soon	none	led/off/0
-명령 아님	is the fan on	none	fan/on/7
+명령 아님	the fans were screaming at the concert	none	fan/on/7
+명령 아님	my uncle repairs car engines	none	motor/change/7
+명령 아님	electric motors are efficient	none	motor/on/7
+명령 아님	light is faster than sound	none	led/change/6
+명령 아님	the coffee is too hot	none	fan/on/6
+명령 아님	my soup is cold	none	fan/off/0
+명령 아님	led lights save energy	none	led/on/7
+명령 아님	this engine needs an oil change	none	motor/change/7
+명령 아님	did the motor stop	none	motor/off/0
+명령 아님	how fast is the fan spinning	none	fan/on/6
+명령 아님	leave the lights as they are	none	led/change/0
