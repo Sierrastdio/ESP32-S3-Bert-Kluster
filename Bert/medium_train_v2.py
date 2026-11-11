@@ -33,7 +33,9 @@ VOCAB_BUDGET = (
 MAX_LEN = 64  # 최대 토큰 수 ([CLS], [SEP] 포함)
 EPOCHS, BATCH, LR = 4, 32, 5e-5
 FINETUNE_EPOCHS, FINETUNE_LR, HARD_REPEAT = 2, 5e-6, 5
-GROUP_DROP_TOLERANCE = 2  # 보강 채택 시 직접 명령·애매한 표현은 이만큼까지 하락 허용 (우연한 흔들림 고려)
+GROUP_DROP_TOLERANCE = (
+    2  # 보강 채택 시 직접 명령·애매한 표현은 이만큼까지 하락 허용 (우연한 흔들림 고려)
+)
 CONF_THRESHOLD = 0.6  # 이보다 확신이 낮으면 HOLD
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -411,55 +413,105 @@ UNSEEN_GROUPS = {
 #            어둡다 -> 조명 켜기 7 / 조금 어둡다 -> 조명 6으로 변경 / 눈부시다 -> 조명 2로 변경 / 잔다·나간다·아무도 없다 -> 조명 끄기
 #            모터가 시끄럽다·위험하다 -> 모터 끄기 / 너무 빠르다 -> 모터 2로 변경 / 너무 느리다 -> 모터 6으로 변경
 UNSEEN_GROUPS["직접 명령"] += [
-    ("could you switch the lighting on", 0, 0, 7), ("i would like the bulb dimmed to level 2", 0, 2, 2),
-    ("make the light as bright as it goes", 0, 2, 7), ("go ahead and kill the lamp", 0, 1, 0),
+    ("could you switch the lighting on", 0, 0, 7),
+    ("i would like the bulb dimmed to level 2", 0, 2, 2),
+    ("make the light as bright as it goes", 0, 2, 7),
+    ("go ahead and kill the lamp", 0, 1, 0),
     ("drop the lamp brightness to half", 0, 2, 4),
-    ("get the motor spinning", 1, 0, 7), ("bring the rotor to a stop", 1, 1, 0),
-    ("ease the motor down to low speed", 1, 2, 2), ("push the engine to full speed", 1, 2, 7),
-    ("have the motor run at half speed", 1, 0, 4), ("power the engine down", 1, 1, 0),
-    ("switch the ventilator to high", 2, 2, 6), ("get the fan blowing gently", 2, 0, 2),
-    ("i want the fan off right away", 2, 1, 0), ("crank up the blower", 2, 2, 6),
+    ("get the motor spinning", 1, 0, 7),
+    ("bring the rotor to a stop", 1, 1, 0),
+    ("ease the motor down to low speed", 1, 2, 2),
+    ("push the engine to full speed", 1, 2, 7),
+    ("have the motor run at half speed", 1, 0, 4),
+    ("power the engine down", 1, 1, 0),
+    ("switch the ventilator to high", 2, 2, 6),
+    ("get the fan blowing gently", 2, 0, 2),
+    ("i want the fan off right away", 2, 1, 0),
+    ("crank up the blower", 2, 2, 6),
     ("give me some light over here", 0, 0, 7),
 ]
 UNSEEN_GROUPS["애매한 표현"] += [
-    ("it is like a sauna in here", 2, 0, 6), ("i am sweating buckets", 2, 0, 6),
-    ("the heat is making me dizzy", 2, 0, 6), ("it is boiling hot today", 2, 0, 6),
-    ("my forehead is all sweaty", 2, 0, 6), ("i can not stand this heat", 2, 0, 6),
+    ("it is like a sauna in here", 2, 0, 6),
+    ("i am sweating buckets", 2, 0, 6),
+    ("the heat is making me dizzy", 2, 0, 6),
+    ("it is boiling hot today", 2, 0, 6),
+    ("my forehead is all sweaty", 2, 0, 6),
+    ("i can not stand this heat", 2, 0, 6),
     ("it feels like a hundred degrees", 2, 0, 6),
-    ("the room is slightly stuffy", 2, 0, 4), ("some fresh air would be nice", 2, 0, 4),
-    ("it is getting warmer in here", 2, 0, 4), ("i am a little hot", 2, 0, 4),
-    ("my feet are cold", 2, 1, 0), ("i am shaking from the cold", 2, 1, 0), ("brr it is so cold", 2, 1, 0),
-    ("i am wearing two jackets and still cold", 2, 1, 0), ("the room is icy", 2, 1, 0),
+    ("the room is slightly stuffy", 2, 0, 4),
+    ("some fresh air would be nice", 2, 0, 4),
+    ("it is getting warmer in here", 2, 0, 4),
+    ("i am a little hot", 2, 0, 4),
+    ("my feet are cold", 2, 1, 0),
+    ("i am shaking from the cold", 2, 1, 0),
+    ("brr it is so cold", 2, 1, 0),
+    ("i am wearing two jackets and still cold", 2, 1, 0),
+    ("the room is icy", 2, 1, 0),
     ("i caught a chill", 2, 1, 0),
-    ("the wind is messing up my hair", 2, 2, 2), ("my papers keep flying off the desk", 2, 2, 2),
+    ("the wind is messing up my hair", 2, 2, 2),
+    ("my papers keep flying off the desk", 2, 2, 2),
     ("the air is blasting at me", 2, 2, 2),
-    ("the fan is barely doing anything", 2, 2, 6), ("i need more airflow", 2, 2, 6),
-    ("i can not find the door in the dark", 0, 0, 7), ("it is so dark i keep tripping", 0, 0, 7),
-    ("i can not see my book", 0, 0, 7), ("everything is black in here", 0, 0, 7),
-    ("i need to see what i am doing", 0, 0, 7), ("it got dark outside", 0, 0, 7),
-    ("the room could be brighter", 0, 2, 6), ("i am straining my eyes to read", 0, 2, 6),
+    ("the fan is barely doing anything", 2, 2, 6),
+    ("i need more airflow", 2, 2, 6),
+    ("i can not find the door in the dark", 0, 0, 7),
+    ("it is so dark i keep tripping", 0, 0, 7),
+    ("i can not see my book", 0, 0, 7),
+    ("everything is black in here", 0, 0, 7),
+    ("i need to see what i am doing", 0, 0, 7),
+    ("it got dark outside", 0, 0, 7),
+    ("the room could be brighter", 0, 2, 6),
+    ("i am straining my eyes to read", 0, 2, 6),
     ("the light is a bit weak", 0, 2, 6),
-    ("the light is burning my eyes", 0, 2, 2), ("i have to squint because of the light", 0, 2, 2),
-    ("the lamp is way too bright", 0, 2, 2), ("the brightness is giving me a headache", 0, 2, 2),
-    ("i am going to take a nap", 0, 1, 0), ("we are all heading out now", 0, 1, 0), ("bedtime", 0, 1, 0),
-    ("the room is empty now", 0, 1, 0), ("i am off to sleep", 0, 1, 0),
-    ("the motor noise is driving me crazy", 1, 1, 0), ("the engine is so loud i can not think", 1, 1, 0),
+    ("the light is burning my eyes", 0, 2, 2),
+    ("i have to squint because of the light", 0, 2, 2),
+    ("the lamp is way too bright", 0, 2, 2),
+    ("the brightness is giving me a headache", 0, 2, 2),
+    ("i am going to take a nap", 0, 1, 0),
+    ("we are all heading out now", 0, 1, 0),
+    ("bedtime", 0, 1, 0),
+    ("the room is empty now", 0, 1, 0),
+    ("i am off to sleep", 0, 1, 0),
+    ("the motor noise is driving me crazy", 1, 1, 0),
+    ("the engine is so loud i can not think", 1, 1, 0),
     ("that motor is deafening", 1, 1, 0),
-    ("the motor is burning up", 1, 1, 0), ("there is a burning smell from the engine", 1, 1, 0),
+    ("the motor is burning up", 1, 1, 0),
+    ("there is a burning smell from the engine", 1, 1, 0),
     ("the motor is sparking", 1, 1, 0),
-    ("the motor is going crazy fast", 1, 2, 2), ("the engine is racing", 1, 2, 2),
-    ("the motor is too sluggish", 1, 2, 6), ("the engine has no power", 1, 2, 6),
+    ("the motor is going crazy fast", 1, 2, 2),
+    ("the engine is racing", 1, 2, 2),
+    ("the motor is too sluggish", 1, 2, 6),
+    ("the engine has no power", 1, 2, 6),
 ]
-UNSEEN_GROUPS["명령 아님"] += [(s, IGNORE, 3, IGNORE) for s in [
-    "what is two plus two", "i am going to the store", "can you recommend a movie", "my phone battery is low",
-    "the sky looks beautiful", "i finished my homework", "how far is the moon", "what a nice day",
-    "i miss my friends", "the coffee is too hot", "my soup is cold",
-    "the lamp on my desk is new", "my dad bought a fan yesterday", "motors were invented a long time ago",
-    "led lights save energy", "this engine needs an oil change", "how loud is a jet engine",
-    "the fan in my laptop is broken",
-    "is the light still on", "did the motor stop", "how fast is the fan spinning", "what level is the lamp set to",
-    "please do not touch the lamp", "never switch on the motor", "leave the lights as they are",
-]]
+UNSEEN_GROUPS["명령 아님"] += [
+    (s, IGNORE, 3, IGNORE)
+    for s in [
+        "what is two plus two",
+        "i am going to the store",
+        "can you recommend a movie",
+        "my phone battery is low",
+        "the sky looks beautiful",
+        "i finished my homework",
+        "how far is the moon",
+        "what a nice day",
+        "i miss my friends",
+        "the coffee is too hot",
+        "my soup is cold",
+        "the lamp on my desk is new",
+        "my dad bought a fan yesterday",
+        "motors were invented a long time ago",
+        "led lights save energy",
+        "this engine needs an oil change",
+        "how loud is a jet engine",
+        "the fan in my laptop is broken",
+        "is the light still on",
+        "did the motor stop",
+        "how fast is the fan spinning",
+        "what level is the lamp set to",
+        "please do not touch the lamp",
+        "never switch on the motor",
+        "leave the lights as they are",
+    ]
+]
 
 UNSEEN = [x for items in UNSEEN_GROUPS.values() for x in items]
 
@@ -847,11 +899,15 @@ def finetune_with_gate(tok, model):
     none_not_worse = after["명령 아님"][0] >= before["명령 아님"][0]
     improved = after_score > before_score
     # 명령 아님은 떨어지면 안 되고(위 조건), 나머지 그룹은 GROUP_DROP_TOLERANCE 문장까지 하락을 허용한다.
-    no_group_worse = all(after[g][0] >= before[g][0] - GROUP_DROP_TOLERANCE for g in after)
+    no_group_worse = all(
+        after[g][0] >= before[g][0] - GROUP_DROP_TOLERANCE for g in after
+    )
     print(f"보강 후 점수: {after}, 안전 가중 점수={after_score}")
     if none_not_worse and no_group_worse and improved:
         save_model(model, keep_backup=True)
-        print("결과 채택: 명령 아님이 유지되고 다른 그룹 하락이 허용 범위 안이며 안전 가중 점수가 올랐습니다.")
+        print(
+            "결과 채택: 명령 아님이 유지되고 다른 그룹 하락이 허용 범위 안이며 안전 가중 점수가 올랐습니다."
+        )
         return True
 
     model.load_state_dict(before_state)

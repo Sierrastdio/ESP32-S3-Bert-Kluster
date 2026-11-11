@@ -133,7 +133,9 @@ def interactive_menu(pt_path, weights_dir, default_baud):
     # 1. COM 포트 검색
     ports = get_available_com_ports()
     if not ports:
-        port = input("검색된 COM 포트가 없습니다. 포트 이름을 직접 입력하세요 (예: COM3): ").strip()
+        port = input(
+            "검색된 COM 포트가 없습니다. 포트 이름을 직접 입력하세요 (예: COM3): "
+        ).strip()
     else:
         print("\n연결된 시리얼 포트 목록:")
         for idx, (dev, desc) in enumerate(ports, start=1):
@@ -180,11 +182,23 @@ def interactive_menu(pt_path, weights_dir, default_baud):
 def main():
     parser = argparse.ArgumentParser(description="ESP32-S3 가중치 바이너리 플래싱 도구")
     parser.add_argument("--port", help="ESP32-S3 직렬 COM 포트 (예: COM3)")
-    parser.add_argument("--node", type=int, choices=[1, 2, 3, 4], help="플래시할 노드 번호 (1~4)")
-    parser.add_argument("--baud", type=int, default=DEFAULT_BAUD, help=f"전송 속도 (기본: {DEFAULT_BAUD})")
+    parser.add_argument(
+        "--node", type=int, choices=[1, 2, 3, 4], help="플래시할 노드 번호 (1~4)"
+    )
+    parser.add_argument(
+        "--baud",
+        type=int,
+        default=DEFAULT_BAUD,
+        help=f"전송 속도 (기본: {DEFAULT_BAUD})",
+    )
     parser.add_argument(
         "--pt",
-        default=str(Path(__file__).resolve().parent.parent / "Bert" / "pruned" / "model_finetuned.pt"),
+        default=str(
+            Path(__file__).resolve().parent.parent
+            / "Bert"
+            / "pruned"
+            / "model_finetuned.pt"
+        ),
         help="학습 완료된 .pt 파일 경로",
     )
     parser.add_argument(
@@ -192,7 +206,12 @@ def main():
         default=str(Path(__file__).resolve().parent.parent / "Bert" / "weights"),
         help="생성된 nodeN.bin 저장 디렉토리",
     )
-    parser.add_argument("--dtype", choices=["fp16", "fp32"], default="fp16", help="가중치 정밀도 (기본: fp16)")
+    parser.add_argument(
+        "--dtype",
+        choices=["fp16", "fp32"],
+        default="fp16",
+        help="가중치 정밀도 (기본: fp16)",
+    )
 
     args = parser.parse_args()
 
