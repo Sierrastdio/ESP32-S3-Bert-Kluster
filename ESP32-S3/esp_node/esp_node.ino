@@ -25,39 +25,39 @@ static const char *TAG = "BERT_NODE";
 
 // ── 64바이트 가중치 바이너리 헤더 (export_weights.py 와 일치) ─────────────────
 typedef struct __attribute__((packed)) {
-	uint32_t magic;        // 0: 0x42455254 ('BERT')
-	uint16_t version;      // 4: 파일 버전 (1)
-	uint8_t  node_id;      // 6: 노드 번호 (1..4)
-	uint8_t  flags;        // 7: bit0=has_emb, bit1=has_head
-	uint16_t hidden_size;  // 8: 히든 차원 (512)
-	uint16_t num_layers;   // 10: 총 레이어 수 (8)
-	uint8_t  layer_start;  // 12: 시작 레이어 (0-based)
-	uint8_t  layer_end;    // 13: 종료 레이어 (inclusive)
-	uint8_t  num_heads;    // 14: 어텐션 헤드 수 (8)
-	uint16_t head_dim;     // 15: 헤드 차원 (64)
-	uint16_t ffn_size;     // 17: FFN 중간 크기 (2048)
-	uint8_t  dev_classes;  // 19: 장치 분류 수 (3)
-	uint8_t  act_classes;  // 20: 동작 분류 수 (3~4)
-	uint8_t  amt_classes;  // 21: 양 분류 수 (8)
-	uint8_t  weight_dtype; // 22: 가중치 정밀도 (0=FP32, 1=FP16)
-	uint16_t n_tensors;    // 23: 텐서 개수
-	uint16_t vocab_size;   // 25: 어휘 크기
-	uint16_t max_pos;      // 27: 최대 위치 임베딩 크기
-	uint8_t  reserved[35]; // 29: 64바이트 정렬 패딩
+	uint32_t magic;       // 0: 0x42455254 ('BERT')
+	uint16_t version;     // 4: 파일 버전 (1)
+	uint8_t node_id;      // 6: 노드 번호 (1..4)
+	uint8_t flags;        // 7: bit0=has_emb, bit1=has_head
+	uint16_t hidden_size; // 8: 히든 차원 (512)
+	uint16_t num_layers;  // 10: 총 레이어 수 (8)
+	uint8_t layer_start;  // 12: 시작 레이어 (0-based)
+	uint8_t layer_end;    // 13: 종료 레이어 (inclusive)
+	uint8_t num_heads;    // 14: 어텐션 헤드 수 (8)
+	uint16_t head_dim;    // 15: 헤드 차원 (64)
+	uint16_t ffn_size;    // 17: FFN 중간 크기 (2048)
+	uint8_t dev_classes;  // 19: 장치 분류 수 (3)
+	uint8_t act_classes;  // 20: 동작 분류 수 (3~4)
+	uint8_t amt_classes;  // 21: 양 분류 수 (8)
+	uint8_t weight_dtype; // 22: 가중치 정밀도 (0=FP32, 1=FP16)
+	uint16_t n_tensors;   // 23: 텐서 개수
+	uint16_t vocab_size;  // 25: 어휘 크기
+	uint16_t max_pos;     // 27: 최대 위치 임베딩 크기
+	uint8_t reserved[35]; // 29: 64바이트 정렬 패딩
 } bert_weight_header_t;
 
 _Static_assert(sizeof(bert_weight_header_t) == 64, "Header must be 64 bytes");
 
 // ── 노드 런타임 상태 ─────────────────────────────────────────────────────────
 static uint8_t g_node_id = 1;
-static bool    g_has_emb = true;
-static bool    g_has_head = false;
+static bool g_has_emb = true;
+static bool g_has_head = false;
 static uint8_t g_layer_start = 0;
 static uint8_t g_layer_end = 1;
 
-static uint8_t                *rx_buf = NULL;
-static uint8_t                *tx_buf = NULL;
-static spi_device_handle_t     tx_dev = NULL;
+static uint8_t *rx_buf = NULL;
+static uint8_t *tx_buf = NULL;
+static spi_device_handle_t tx_dev = NULL;
 static spi_slave_transaction_t rx_trans[NODE_MAX_CHUNKS];
 
 // ── 유틸리티 함수 ─────────────────────────────────────────────────────────────
@@ -122,8 +122,9 @@ static void detect_node_role(void) {
 		g_has_head = (hdr.flags & 2) != 0;
 		g_layer_start = hdr.layer_start;
 		g_layer_end = hdr.layer_end;
-		Serial.printf("\n[v] 가중치 정상 로드: [파티션 %s] -> Node %u (Layers %u-%u, emb=%d, head=%d)\n",
-		              part->label, g_node_id, g_layer_start, g_layer_end, g_has_emb, g_has_head);
+		Serial.printf(
+		    "\n[v] 가중치 정상 로드: [파티션 %s] -> Node %u (Layers %u-%u, emb=%d, head=%d)\n",
+		    part->label, g_node_id, g_layer_start, g_layer_end, g_has_emb, g_has_head);
 		Serial.flush();
 	} else {
 		// 가중치 미플래싱 시 기본값 (노드 1)
@@ -132,7 +133,9 @@ static void detect_node_role(void) {
 		g_has_head = false;
 		g_layer_start = 0;
 		g_layer_end = 1;
-		Serial.printf("\n[!] 경고: 0x200000 가중치 파티션을 찾지 못했습니다. 기본 Node %u로 동작합니다.\n", g_node_id);
+		Serial.printf(
+		    "\n[!] 경고: 0x200000 가중치 파티션을 찾지 못했습니다. 기본 Node %u로 동작합니다.\n",
+		    g_node_id);
 		Serial.flush();
 	}
 }
@@ -158,7 +161,7 @@ static void uart_setup(void) {
 
 static void wait_config(config_message_t *out) {
 	uint8_t win[sizeof(config_message_t)];
-	size_t  have = 0;
+	size_t have = 0;
 	while (true) {
 		uint8_t b;
 		if (uart_read_bytes(UART_NUM_1, &b, 1, portMAX_DELAY) != 1)
@@ -244,7 +247,7 @@ static bool rx_wait(size_t total) {
 	size_t nc = nchunks(total);
 	for (size_t i = 0; i < nc; i++) {
 		spi_slave_transaction_t *r;
-		uint32_t                 to = (i == 0) ? TIMEOUT_UPSTREAM_MS : TIMEOUT_CHUNK_MS;
+		uint32_t to = (i == 0) ? TIMEOUT_UPSTREAM_MS : TIMEOUT_CHUNK_MS;
 		if (spi_slave_get_trans_result(SPI2_HOST, &r, pdMS_TO_TICKS(to)) != ESP_OK) {
 			ESP_LOGW(TAG, "SPI rx timeout at chunk %u/%u", (unsigned)i, (unsigned)nc);
 			return false;
@@ -295,7 +298,7 @@ static void node_compute(uint16_t count, const uint8_t *in, uint8_t *out, size_t
 		// [노드 1] in: uint16_t token_ids[count] -> out: FP16 hidden states
 		memset(out, 0, data_bytes);
 		memcpy(out, in, (size_t)count * 2); // 통신 테스트용 복사
-		// TODO: Word/Pos/Type 임베딩 + 레이어 0~1 연산
+		                                    // TODO: Word/Pos/Type 임베딩 + 레이어 0~1 연산
 	} else {
 		// [노드 2, 3] in: FP16 hidden states -> out: FP16 hidden states
 		memcpy(out, in, data_bytes);
@@ -306,12 +309,13 @@ static void node_compute(uint16_t count, const uint8_t *in, uint8_t *out, size_t
 // ── 한 문장 처리 파이프라인 ──────────────────────────────────────────────────
 static void handle_sentence(const config_message_t *cfg) {
 	const uint16_t sid = cfg->sentence_id, count = cfg->token_count;
-	const size_t   data_bytes = cfg->data_packet_bytes;
-	const size_t   rx_total = g_has_emb ? (sizeof(tokens_header_t) + (size_t)count * 2)
-	                                    : (sizeof(data_header_t) + data_bytes);
-	const size_t   tx_total = sizeof(data_header_t) + data_bytes;
+	const size_t data_bytes = cfg->data_packet_bytes;
+	const size_t rx_total = g_has_emb ? (sizeof(tokens_header_t) + (size_t)count * 2)
+	                                  : (sizeof(data_header_t) + data_bytes);
+	const size_t tx_total = sizeof(data_header_t) + data_bytes;
 
-	Serial.printf("[Node %u] 문장 #%u 처리 시작 (토큰수: %u, RX바이트: %u)\n", g_node_id, sid, count, (unsigned)rx_total);
+	Serial.printf("[Node %u] 문장 #%u 처리 시작 (토큰수: %u, RX바이트: %u)\n", g_node_id, sid,
+	              count, (unsigned)rx_total);
 
 	if (!rx_open(rx_buf, rx_total)) {
 		Serial.printf("[Node %u] SPI 슬레이브 RX 열기 실패!\n", g_node_id);
@@ -322,14 +326,17 @@ static void handle_sentence(const config_message_t *cfg) {
 	if (!g_has_head) {
 		Serial.printf("[Node %u] 다음 노드 READY(D15) 대기 중...\n", g_node_id);
 		if (!wait_level(PIN_RDY_DOWN, 1, TIMEOUT_READY_MS)) {
-			Serial.printf("[Node %u] 다음 노드 READY 타임아웃 (5초 경과)! D15 핀 배선을 확인하세요.\n", g_node_id);
+			Serial.printf(
+			    "[Node %u] 다음 노드 READY 타임아웃 (5초 경과)! D15 핀 배선을 확인하세요.\n",
+			    g_node_id);
 			spi_slave_free(SPI2_HOST);
 			return;
 		}
 		Serial.printf("[Node %u] 다음 노드 READY 확인됨!\n", g_node_id);
 	}
 
-	Serial.printf("[Node %u] 내 READY(D%u) HIGH 출력 -> 이전 노드/Pico로 신호 전송\n", g_node_id, PIN_RDY_UP(g_node_id));
+	Serial.printf("[Node %u] 내 READY(D%u) HIGH 출력 -> 이전 노드/Pico로 신호 전송\n", g_node_id,
+	              PIN_RDY_UP(g_node_id));
 	gpio_set_level((gpio_num_t)PIN_RDY_UP(g_node_id), 1);
 	bool ok = rx_wait(rx_total);
 	gpio_set_level((gpio_num_t)PIN_RDY_UP(g_node_id), 0);

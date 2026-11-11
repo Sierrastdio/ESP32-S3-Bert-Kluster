@@ -4,7 +4,7 @@ GPxx, GPIOxx == Dxx
 
 # pico1
 
-```
+```txt
 TX       D0      -> RX(ESP 1,2,3,4)
 
 SCLK0    D2      -> D12(ESP 1)
@@ -24,7 +24,7 @@ D-       D9      -> USB-A-D-
 
 # ESP1
 
-```
+```txt
 SCLK1   D4      -> D12(ESP 2)
 MOSI1   D5      -> D11(ESP 2)
 CS1     D6      -> D10(ESP 2)
@@ -36,7 +36,7 @@ RDY1    D15     <- D16(ESP 2)
 
 # ESP2
 
-```
+```txt
 SCLK2   D4      -> D12(ESP 3)
 MOSI2   D5      -> D11(ESP 3)
 CS2     D6      -> D10(ESP 3)
@@ -48,7 +48,7 @@ RDY2    D15     <- D16(ESP 3)
 
 # ESP3
 
-```
+```txt
 SCLK3   D4      -> D12(ESP 4)
 MOSI3   D5      -> D11(ESP 4)
 CS3     D6      -> D10(ESP 4)
@@ -58,6 +58,6 @@ RDY3    D15     <- D16(ESP 4)
 
 # ESP4
 
-```
+```txt
 TX              -> RX(pico1)
 ```
